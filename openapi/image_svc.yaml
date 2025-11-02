@@ -1,0 +1,125 @@
+openapi: 3.0.0
+info:
+  title: Image Service API
+  description: Microservice for image to PDF conversion
+  version: 1.0.0
+servers:
+  - url: http://localhost:8084
+    description: Local development
+
+paths:
+  /image_svc/ConvertImage:
+    post:
+      summary: Convert image to PDF
+      description: Converts PNG/JPEG image to PDF format
+      operationId: convertImage
+      requestBody:
+        required: true
+        content:
+          application/x-protobuf:
+            schema:
+              $ref: '#/components/schemas/ImageConversionRequest'
+      responses:
+        '200':
+          description: Conversion successful
+          content:
+            application/x-protobuf:
+              schema:
+                $ref: '#/components/schemas/ImageConversionResponse'
+        '500':
+          description: Conversion failed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+
+components:
+  schemas:
+    ImageConversionRequest:
+      type: object
+      required:
+        - user_id
+        - user_email
+        - input_format
+      properties:
+        user_id:
+          type: string
+          description: User identifier
+        user_email:
+          type: string
+          format: email
+          description: User email address
+        image_url:
+          type: string
+          format: uri
+          description: URL to fetch image from (preferred)
+          example: "http://user_svc/ImageLoader/job_123"
+        image_data:
+          type: string
+          format: byte
+          description: Raw image binary data (deprecated, use image_url)
+        input_format:
+          type: string
+          enum: [png, jpeg, jpg]
+          description: Input image format
+        pdf_quality:
+          type: string
+          enum: [low, medium, high, lossless]
+          default: medium
+          description: PDF conversion quality
+        strip_metadata:
+          type: boolean
+          default: false
+          description: Remove EXIF metadata from image
+        max_width:
+          type: integer
+          format: int32
+          default: 0
+          description: Maximum width (0 = no resize)
+        max_height:
+          type: integer
+          format: int32
+          default: 0
+          description: Maximum height (0 = no resize)
+        storage_id:
+          type: string
+          description: Unique storage identifier for cleanup
+
+    ImageConversionResponse:
+      type: object
+      properties:
+        success:
+          type: boolean
+          description: Whether conversion succeeded
+        message:
+          type: string
+          description: Status message
+        pdf_data:
+          type: string
+          format: byte
+          description: Converted PDF binary data
+        input_size:
+          type: integer
+          format: int64
+          description: Original image size in bytes
+        output_size:
+          type: integer
+          format: int64
+          description: PDF size in bytes
+        width:
+          type: integer
+          format: int32
+          description: Image width in pixels
+        height:
+          type: integer
+          format: int32
+          description: Image height in pixels
+        storage_id:
+          type: string
+          description: PDF storage identifier
+        original_storage_id:
+          type: string
+          description: Original PNG storage identifier (for cleanup)

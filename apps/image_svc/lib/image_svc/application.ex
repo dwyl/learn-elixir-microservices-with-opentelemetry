@@ -14,6 +14,9 @@ defmodule ImageSvc.Application do
     IO.puts("Starting image_svc on port #{port}")
 
     children = [
+      # Prometheus metrics exporter (port 9568)
+      ImageSvc.Metrics,
+      # HTTP server (port 8084)
       {Bandit, plug: ImageSvc.Router, port: port}
     ]
 

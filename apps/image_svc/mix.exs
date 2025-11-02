@@ -13,9 +13,10 @@ defmodule ImageSvc.MixProject do
       deps: deps(),
       releases: [
         image_svc: [
-          image_svc: :permanent,
-          opentelemetry_exporter: :permanent,
-          opentelemetry: :temporary
+          applications: [
+            opentelemetry_exporter: :permanent,
+            opentelemetry: :temporary
+          ]
         ]
       ]
     ]
@@ -41,11 +42,15 @@ defmodule ImageSvc.MixProject do
       {:protobuf, "~> 0.15.0"},
       {:jason, "~> 1.4"},
 
-      # OpenTelemetry for distributed tracing
+      # OpenTelemetry for distributed tracing (exporter MUST be before opentelemetry)
       {:opentelemetry_api, "~> 1.5"},
-      {:opentelemetry, "~> 1.7"},
       {:opentelemetry_exporter, "~> 1.10"},
+      {:opentelemetry, "~> 1.7"},
       {:tls_certificate_check, "~> 1.29"},
+
+      # Prometheus metrics
+      {:telemetry_metrics_prometheus_core, "~> 1.2"},
+      {:telemetry_poller, "~> 1.0"},
 
       # OpenAPI documentation
       {:open_api_spex, "~> 3.21"},

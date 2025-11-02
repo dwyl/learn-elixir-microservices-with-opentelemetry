@@ -1,0 +1,187 @@
+openapi: 3.0.0
+info:
+  title: Job Service API
+  description: Asynchronous job processing service using Oban
+  version: 1.0.0
+servers:
+  - url: http://localhost:8082
+    description: Local development
+
+paths:
+  /job_svc/EnqueueEmail:
+    post:
+      summary: Enqueue email job in Oban
+      description: Creates an asynchronous job to send an email
+      operationId: enqueueEmail
+      requestBody:
+        required: true
+        content:
+          application/x-protobuf:
+            schema:
+              type: object
+              required:
+                - user_id
+                - email
+              properties:
+                user_id:
+                  type: string
+                  description: User identifier
+                email:
+                  type: string
+                  format: email
+                  description: Recipient email address
+                subject:
+                  type: string
+                  description: Email subject
+                body:
+                  type: string
+                  description: Email body content
+      responses:
+        '200':
+          description: Email job enqueued successfully
+          content:
+            application/x-protobuf:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  job_id:
+                    type: string
+                    description: Oban job ID
+                  message:
+                    type: string
+        '400':
+          description: Invalid request
+        '500':
+          description: Failed to enqueue job
+
+  /job_svc/NotifyEmailDelivery:
+    post:
+      summary: Receive delivery status from email service
+      description: Callback endpoint for email delivery notifications
+      operationId: notifyEmailDelivery
+      requestBody:
+        required: true
+        content:
+          application/x-protobuf:
+            schema:
+              type: object
+              properties:
+                job_id:
+                  type: string
+                  description: Oban job ID
+                user_id:
+                  type: string
+                email:
+                  type: string
+                status:
+                  type: string
+                  enum: [sent, failed, bounced]
+                  description: Delivery status
+                error:
+                  type: string
+                  description: Error message if delivery failed
+      responses:
+        '200':
+          description: Notification received
+          content:
+            application/x-protobuf:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+
+  /job_svc/ConvertImage:
+    post:
+      summary: Enqueue image conversion job
+      description: Creates an asynchronous job to convert image to PDF
+      operationId: convertImage
+      requestBody:
+        required: true
+        content:
+          application/x-protobuf:
+            schema:
+              type: object
+              required:
+                - user_id
+                - user_email
+                - image_url
+                - input_format
+              properties:
+                user_id:
+                  type: string
+                user_email:
+                  type: string
+                  format: email
+                image_url:
+                  type: string
+                  format: uri
+                  description: URL to fetch image from
+                  example: "http://user_svc/ImageLoader/job_123"
+                input_format:
+                  type: string
+                  enum: [png, jpeg, jpg]
+                pdf_quality:
+                  type: string
+                  enum: [low, medium, high, lossless]
+                  default: medium
+                strip_metadata:
+                  type: boolean
+                  default: false
+                max_width:
+                  type: integer
+                  format: int32
+                  default: 0
+                max_height:
+                  type: integer
+                  format: int32
+                  default: 0
+                storage_id:
+                  type: string
+                  description: Original image storage ID for cleanup
+      responses:
+        '200':
+          description: Conversion job enqueued successfully
+          content:
+            application/x-protobuf:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  job_id:
+                    type: string
+                    description: Oban job ID
+                  message:
+                    type: string
+        '400':
+          description: Invalid request
+        '500':
+          description: Failed to enqueue job
+
+components:
+  schemas:
+    ObanJob:
+      type: object
+      description: Oban background job representation
+      properties:
+        id:
+          type: integer
+        state:
+          type: string
+          enum: [available, scheduled, executing, retryable, completed, discarded, cancelled]
+        queue:
+          type: string
+        worker:
+          type: string
+        args:
+          type: object
+        max_attempts:
+          type: integer
+        attempt:
+          type: integer
+        scheduled_at:
+          type: string
+          format: date-time

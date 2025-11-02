@@ -2,6 +2,15 @@ defmodule ImageSvc.Router do
   use Plug.Router
   require Logger
 
+  # Request ID for correlation across services
+  plug(Plug.RequestId)
+
+  # Logger with request_id metadata
+  plug(Plug.Logger, log: :info)
+
+  # Telemetry for metrics
+  plug(Plug.Telemetry, event_prefix: [:image_svc, :plug])
+
   plug(:match)
   plug(Plug.Parsers,
     parsers: [:json],
@@ -13,6 +22,33 @@ defmodule ImageSvc.Router do
   plug(OpenApiSpex.Plug.PutApiSpec, module: ImageSvc.ApiSpec)
 
   plug(:dispatch)
+
+  # Health check endpoints
+  get "/health" do
+    # Simple liveness check
+    send_resp(conn, 200, "OK")
+  end
+
+  get "/health/ready" do
+    # Readiness check - verify dependencies
+    # TODO: Check MinIO, user_svc connectivity
+    send_resp(conn, 200, "READY")
+  end
+
+  # Metrics info endpoint
+  get "/metrics" do
+    conn
+    |> put_resp_content_type("text/plain")
+    |> send_resp(200, """
+    Prometheus metrics are available at:
+    http://localhost:9568/metrics
+
+    Metrics include:
+    - HTTP request count and duration
+    - Image conversion count, duration, sizes
+    - VM memory and process counts
+    """)
+  end
 
   # OpenAPI documentation endpoints
   get "/api/openapi" do

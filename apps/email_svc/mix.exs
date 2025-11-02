@@ -47,8 +47,8 @@ defmodule EmailSvc.MixProject do
       {:telemetry, "~> 1.3"},
       {:telemetry_metrics, "~> 1.1"},
       {:opentelemetry_api, "~> 1.5"},
-      {:opentelemetry, "~> 1.7"},
       {:opentelemetry_exporter, "~> 1.10"},
+      {:opentelemetry, "~> 1.7"},
       {:tls_certificate_check, "~> 1.29"},
       # inspect
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},

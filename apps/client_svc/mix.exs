@@ -42,9 +42,9 @@ defmodule ClientSvc.MixProject do
       {:req, "~> 0.5.15"},
       {:protobuf, "~> 0.15.0"},
       # {:telemetry, "~> 1.3"},
+      {:opentelemetry_exporter, "~> 1.10"},
       {:opentelemetry, "~> 1.7"},
       {:opentelemetry_api, "~> 1.5"},
-      {:opentelemetry_exporter, "~> 1.10"},
       {:tls_certificate_check, "~> 1.29"},
 
       # {:telemetry_metrics, "~> 1.1"},

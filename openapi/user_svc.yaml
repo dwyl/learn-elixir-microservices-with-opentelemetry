@@ -1,0 +1,237 @@
+openapi: 3.0.0
+info:
+  title: User Service API
+  description: User management and orchestration service
+  version: 1.0.0
+servers:
+  - url: http://localhost:8081
+    description: Local development
+
+paths:
+  /user_svc/CreateUser:
+    post:
+      summary: Create user and trigger email workflow
+      operationId: createUser
+      requestBody:
+        required: true
+        content:
+          application/x-protobuf:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                name:
+                  type: string
+                email:
+                  type: string
+                  format: email
+      responses:
+        '200':
+          description: User created successfully
+          content:
+            application/x-protobuf:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /user_svc/NotifyEmailSent:
+    post:
+      summary: Receive callback from job_svc after email sent
+      operationId: notifyEmailSent
+      requestBody:
+        required: true
+        content:
+          application/x-protobuf:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                email:
+                  type: string
+                status:
+                  type: string
+      responses:
+        '200':
+          description: Notification received
+
+  /user_svc/ConvertImage:
+    post:
+      summary: Initiate image conversion workflow
+      operationId: convertImage
+      requestBody:
+        required: true
+        content:
+          application/x-protobuf:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                user_email:
+                  type: string
+                image_data:
+                  type: string
+                  format: byte
+                input_format:
+                  type: string
+                  enum: [png, jpeg, jpg]
+      responses:
+        '200':
+          description: Conversion initiated
+          content:
+            application/x-protobuf:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  message:
+                    type: string
+
+  /user_svc/ImageLoader/{job_id}:
+    get:
+      summary: Serve stored images to other services
+      operationId: loadImage
+      parameters:
+        - name: job_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Job identifier for the stored image
+      responses:
+        '200':
+          description: Image binary data
+          content:
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '404':
+          description: Image not found
+
+  /user_svc/StoreImage:
+    post:
+      summary: Store image/PDF in MinIO and return presigned URL
+      description: Stores binary data in MinIO object storage and generates a presigned URL for client access
+      operationId: storeImage
+      requestBody:
+        required: true
+        content:
+          application/x-protobuf:
+            schema:
+              type: object
+              properties:
+                user_id:
+                  type: string
+                client_url:
+                  type: string
+                  description: Client callback URL
+                pdf_data:
+                  type: string
+                  format: byte
+                  description: PDF binary data to store
+      responses:
+        '200':
+          description: Image stored successfully
+          content:
+            application/x-protobuf:
+              schema:
+                type: object
+                properties:
+                  success:
+                    type: boolean
+                  storage_id:
+                    type: string
+                  presigned_url:
+                    type: string
+                    description: Temporary S3 presigned URL for client access
+
+  /user/stream:
+    post:
+      summary: Stream-style endpoint (demo)
+      description: Sends chunked JSON responses
+      operationId: streamUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                id:
+                  type: string
+                name:
+                  type: string
+                email:
+                  type: string
+                age:
+                  type: integer
+                active:
+                  type: boolean
+      responses:
+        '200':
+          description: Chunked JSON responses
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok:
+                    type: boolean
+                  message:
+                    type: string
+
+  /events:
+    get:
+      summary: Server-sent events endpoint (demo)
+      description: Progressive streaming of events
+      operationId: getEvents
+      responses:
+        '200':
+          description: Event stream
+          content:
+            text/event-stream:
+              schema:
+                type: object
+                properties:
+                  event:
+                    type: string
+                  message:
+                    type: string
+
+  /stream/{count}:
+    get:
+      summary: SSE-style continuous stream (demo)
+      operationId: streamCount
+      parameters:
+        - name: count
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Number of events to stream
+      responses:
+        '200':
+          description: Server-sent event stream
+          content:
+            text/event-stream:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: integer
+                  event_count:
+                    type: string
+                  timestamp:
+                    type: integer

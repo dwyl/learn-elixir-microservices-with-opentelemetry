@@ -45,8 +45,8 @@ defmodule JobSvc.MixProject do
       {:opentelemetry_api, "~> 1.5"},
       {:opentelemetry_oban, "~> 1.1"},
       {:opentelemetry_ecto, "~> 1.2"},
-      {:opentelemetry, "~> 1.7"},
       {:opentelemetry_exporter, "~> 1.10"},
+      {:opentelemetry, "~> 1.7"},
       {:tls_certificate_check, "~> 1.29"},
 
       # Email

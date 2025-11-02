@@ -42,9 +42,9 @@ defmodule UserSvc.MixProject do
       {:protobuf, "~> 0.15.0"},
 
       # OpenTelemetry for distributed tracing
+      {:opentelemetry_exporter, "~> 1.10"},
       {:opentelemetry, "~> 1.7"},
       {:opentelemetry_api, "~> 1.5"},
-      {:opentelemetry_exporter, "~> 1.10"},
       {:tls_certificate_check, "~> 1.29"},
 
       # S3/MinIO client
