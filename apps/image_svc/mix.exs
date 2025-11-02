@@ -46,6 +46,10 @@ defmodule ImageSvc.MixProject do
       {:opentelemetry, "~> 1.7"},
       {:opentelemetry_exporter, "~> 1.10"},
       {:tls_certificate_check, "~> 1.29"},
+
+      # OpenAPI documentation
+      {:open_api_spex, "~> 3.21"},
+
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]

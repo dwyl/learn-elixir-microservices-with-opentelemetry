@@ -18,16 +18,40 @@ defmodule ImageSvc.ConversionController do
   - `ResponseBuilder` - Protobuf response construction
   """
 
+  use OpenApiSpex.ControllerSpecs
+
   require Logger
   import Plug.Conn
 
   alias ImageSvc.{UserSvcClient, ConversionOptions, ResponseBuilder}
+  alias ImageSvc.Schemas.{ImageConversionRequestSchema, ImageConversionResponseSchema}
 
   @doc """
   Handles POST /image_svc/ConvertImage endpoint.
 
   Processes an image conversion request from the job worker.
   """
+  operation(:convert,
+    summary: "Convert image to PDF",
+    description: """
+    Converts a PNG or JPEG image to PDF format with configurable quality settings.
+
+    **Workflow:**
+    1. Fetches image from provided URL
+    2. Converts to PDF using ImageMagick
+    3. Stores PDF in MinIO via user_svc
+    4. Returns acknowledgment with image metadata
+
+    **Note:** Client notification is handled automatically by user_svc after storage.
+    """,
+    request_body:
+      {"Image conversion request", "application/x-protobuf", ImageConversionRequestSchema},
+    responses: [
+      ok: {"Conversion successful", "application/x-protobuf", ImageConversionResponseSchema},
+      internal_server_error:
+        {"Conversion failed", "application/x-protobuf", ImageConversionResponseSchema}
+    ]
+  )
   def convert(conn) do
     with {:ok, request} <- decode_request(conn),
          {:ok, image_binary} <- fetch_image(request.image_url),
