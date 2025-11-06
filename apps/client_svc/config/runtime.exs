@@ -9,10 +9,11 @@ port = System.get_env("CLIENT_SVC_PORT", "8085") |> String.to_integer()
 config :client_svc,
   port: port,
   # Use USER_SVC_URL from docker-compose (http://user_svc:8081) or fallback to localhost for dev
-  user_svc_base_url: System.get_env("USER_SVC_URL", "http://127.0.0.1:#{System.get_env("USER_SVC_PORT", "8081")}"),
+  user_svc_base_url:
+    System.get_env("USER_SVC_URL", "http://127.0.0.1:#{System.get_env("USER_SVC_PORT", "8081")}"),
   user_endpoints: %{
-    create: "/user_svc/CreateUser",
-    convert_image: "/user_svc/ConvertImage"
+    create: "/user_svc/create_user/v1",
+    convert_image: "/user_svc/convert_image/v1"
   }
 
 # OpenTelemetry Configuration

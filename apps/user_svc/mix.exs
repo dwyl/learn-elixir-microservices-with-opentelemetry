@@ -30,7 +30,12 @@ defmodule UserSvc.MixProject do
   def application do
     [
       # Only include OTP apps that need explicit startup ordering
-      extra_applications: [:logger, :inets, :os_mon, :tls_certificate_check],
+      extra_applications: [
+        :logger,
+        # :inets,
+        :os_mon,
+        :tls_certificate_check
+      ],
       mod: {UserApp, []}
     ]
   end
@@ -70,9 +75,11 @@ defmodule UserSvc.MixProject do
       # OpenAPI documentation
       {:open_api_spex, "~> 3.21"},
 
-      # dev
+      # static tests
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      # test dependencies
+      {:yaml_elixir, "~> 2.12", only: :test}
     ]
   end
 end

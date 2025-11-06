@@ -51,20 +51,27 @@ defmodule EmailSenderController do
   end
 
   @spec injob_email(map()) :: {:ok, Oban.Job.t()} | {:error, any()}
-  defp injob_email(%{type: "welcome"} = params) do
+  defp injob_email(%{type: type_enum} = params)
+       when type_enum in [:EMAIL_TYPE_WELCOME, :EMAIL_TYPE_NOTIFICATION] do
     # Inject OpenTelemetry trace context into job args
     trace_headers = :otel_propagator_text_map.inject([])
     trace_context = Map.new(trace_headers)
+
+    # Convert enum to string for Oban storage
+    type_string = enum_to_string(type_enum)
 
     %{
       "id" => params.id,
       "email" => params.email,
       "name" => params.name,
-      "bio" => params.bio,
-      "type" => params.type,
+      "type" => type_string,
       "_otel_trace_context" => trace_context
     }
     |> JobService.Workers.EmailWorker.new()
     |> Oban.insert()
   end
+
+  # Convert EmailType enum to string for Oban job storage
+  defp enum_to_string(:EMAIL_TYPE_WELCOME), do: "welcome"
+  defp enum_to_string(:EMAIL_TYPE_NOTIFICATION), do: "notification"
 end

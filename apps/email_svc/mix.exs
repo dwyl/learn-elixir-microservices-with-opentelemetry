@@ -31,8 +31,8 @@ defmodule EmailSvc.MixProject do
     [
       extra_applications: [
         :logger,
-        :inets,
-        :os_mon,
+        # :inets,
+        # :os_mon,
         :tls_certificate_check
       ],
       mod: {EmailApp, []}

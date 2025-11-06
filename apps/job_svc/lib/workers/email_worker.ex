@@ -20,7 +20,7 @@ defmodule JobService.Workers.EmailWorker do
   @impl Oban.Worker
 
   @spec perform(Oban.Job.t()) :: :ok | {:error, any()}
-  def perform(%Oban.Job{args: args} = job) do
+  def perform(%Oban.Job{args: args} = _job) do
     Logger.info("[EmailWorker] Received job with args: #{inspect(args)}")
     do_perform(args)
   end

@@ -35,7 +35,8 @@ defmodule ImageConverter do
       iex> File.write!("output.pdf", pdf_binary)
   """
   def png_to_pdf(png_binary) when is_binary(png_binary) do
-    convert(png_binary, input_format: "png", output_format: "pdf")
+    Task.async(fn -> convert(png_binary, input_format: "png", output_format: "pdf") end)
+    |> Task.await(:infinity)
   end
 
   @doc """

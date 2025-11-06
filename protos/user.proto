@@ -2,12 +2,18 @@ syntax = "proto3";
 
 package mcsv;
 
+// Email notification type
+enum EmailType {
+  EMAIL_TYPE_UNSPECIFIED = 0;  // Default value (required in proto3)
+  EMAIL_TYPE_WELCOME = 1;       // Welcome email for new users
+  EMAIL_TYPE_NOTIFICATION = 2;  // General notification email
+}
+
 message UserRequest {
   string id = 1;
   string name = 2;
   string email = 3;
-  string bio = 4;
-  string type = 5;         // Large text field for testing
+  EmailType type = 4;  // Changed from string to enum
 }
 
 message UserResponse {

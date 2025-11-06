@@ -22,7 +22,7 @@ defmodule ImageSvc.Router do
   plug(Plug.Parsers,
     parsers: [:json],
     json_decoder: Jason,
-    pass: ["application/protobuf"]
+    pass: ["application/protobuf", "application/x-protobuf"]
   )
 
   # OpenAPI spec generation
@@ -30,17 +30,22 @@ defmodule ImageSvc.Router do
 
   plug(:dispatch)
 
+  # ImageService.ConvertImage - Convert image to PDF
+  post "/image_svc/convert_image/v1" do
+    ImageSvc.ConversionController.convert(conn)
+  end
+
   # Health check endpoints
   match "/health", via: [:get, :head] do
     # Simple liveness check
     send_resp(conn, 200, "OK")
   end
 
-  get "/health/ready" do
-    # Readiness check - verify dependencies
-    # TODO: Check MinIO, user_svc connectivity
-    send_resp(conn, 200, "READY")
-  end
+  # get "/health/ready" do
+  #   # Readiness check - verify dependencies
+  #   # TODO: Check MinIO, user_svc connectivity
+  #   send_resp(conn, 200, "READY")
+  # end
 
   # Prometheus metrics endpoint (now handled by PromEx.Plug)
   # get "/metrics" do
@@ -86,12 +91,6 @@ defmodule ImageSvc.Router do
     </body>
     </html>
     """)
-  end
-
-  # RPC-style protobuf endpoint
-  # ImageService.ConvertImage - Convert image to PDF
-  post "/image_svc/ConvertImage" do
-    ImageSvc.ConversionController.convert(conn)
   end
 
   match _ do

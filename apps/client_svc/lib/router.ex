@@ -24,7 +24,7 @@ defmodule ClientRouter do
     parsers: [:json],
     json_decoder: Jason,
     # Skip parsing protobuf
-    pass: ["application/protobuf"]
+    pass: ["application/protobuf", "application/x-protobuf"]
   )
 
   plug(:dispatch)
@@ -32,12 +32,12 @@ defmodule ClientRouter do
   # RPC-style protobuf endpoints (matches services.proto)
 
   # ClientService.ReceiveNotification - Receive final workflow callback
-  post "/client_svc/ReceiveNotification" do
+  post "/client_svc/receive_email_notification" do
     EmailNotificationController.receive(conn)
   end
 
   # ClientService.PdfReady - Receive PDF conversion completion notification
-  post "/client_svc/PdfReady" do
+  post "/client_svc/pdf_ready" do
     PdfReadyController.receive(conn)
   end
 

@@ -13,16 +13,25 @@ port = System.get_env("USER_SVC_PORT", "8081") |> String.to_integer()
 config :user_svc,
   port: port,
   # Use *_URL from docker-compose or fallback to localhost for dev
-  user_svc_base_url: System.get_env("USER_SVC_URL", "http://127.0.0.1:#{System.get_env("USER_SVC_PORT", "8081")}"),
-  job_svc_base_url: System.get_env("JOB_SVC_URL", "http://127.0.0.1:#{System.get_env("JOB_SVC_PORT", "8082")}"),
-  client_svc_base_url: System.get_env("CLIENT_SVC_URL", "http://127.0.0.1:#{System.get_env("CLIENT_SVC_PORT", "8085")}"),
+  user_svc_base_url:
+    System.get_env("USER_SVC_URL", "http://127.0.0.1:#{System.get_env("USER_SVC_PORT", "8081")}"),
+  job_svc_base_url:
+    System.get_env("JOB_SVC_URL", "http://127.0.0.1:#{System.get_env("JOB_SVC_PORT", "8082")}"),
+  client_svc_base_url:
+    System.get_env(
+      "CLIENT_SVC_URL",
+      "http://127.0.0.1:#{System.get_env("CLIENT_SVC_PORT", "8085")}"
+    ),
   job_svc_endpoints: %{
     convert_image: "/job_svc/ConvertImage",
     enqueue_email: "/job_svc/EnqueueEmail"
   },
   client_svc_endpoints: %{
-    pdf_ready: "/client_svc/PdfReady",
-    receive_notification: "/client_svc/ReceiveNotification"
+    pdf_ready: "/client_svc/pdf_ready",
+    receive_notification: "/client_svc/receive_email_notification"
+  },
+  user_svc_endpoints: %{
+    image_loader: "/user_svc/image_loader/v1"
   },
   loki_chunks: System.get_env("LOKI_CHUNKS", "loki-chunks"),
   image_bucket: System.get_env("IMAGE_BUCKET", "msvc-images")

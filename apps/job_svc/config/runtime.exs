@@ -8,21 +8,30 @@ port = System.get_env("JOB_SVC_PORT", "8082") |> String.to_integer()
 config :job_svc,
   port: port,
   # Use *_URL from docker-compose or fallback to localhost for dev
-  image_svc_base_url: System.get_env("IMAGE_SVC_URL", "http://127.0.0.1:#{System.get_env("IMAGE_SVC_PORT", "8084")}"),
-  email_svc_base_url: System.get_env("EMAIL_SVC_URL", "http://127.0.0.1:#{System.get_env("EMAIL_SVC_PORT", "8083")}"),
-  user_svc_base_url: System.get_env("USER_SVC_URL", "http://127.0.0.1:#{System.get_env("USER_SVC_PORT", "8081")}"),
+  image_svc_base_url:
+    System.get_env(
+      "IMAGE_SVC_URL",
+      "http://127.0.0.1:#{System.get_env("IMAGE_SVC_PORT", "8084")}"
+    ),
+  email_svc_base_url:
+    System.get_env(
+      "EMAIL_SVC_URL",
+      "http://127.0.0.1:#{System.get_env("EMAIL_SVC_PORT", "8083")}"
+    ),
+  user_svc_base_url:
+    System.get_env("USER_SVC_URL", "http://127.0.0.1:#{System.get_env("USER_SVC_PORT", "8081")}"),
   job_svc_base_url: "http://127.0.0.1:#{port}",
   image_svc_endpoints: %{
-    convert_image: "/image_svc/ConvertImage"
+    convert_image: "/image_svc/convert_image/v1"
   },
   email_svc_endpoints: %{
-    send_email: "/email_svc/SendEmail"
+    send_email: "/email_svc/send_email/v1"
   },
   user_svc_endpoints: %{
-    notify_email_sent: "/user_svc/NotifyEmailSent"
+    notify_email_sent: "/user_svc/notify_email_sent/v1"
   },
   job_svc_endpoints: %{
-    notify_email_delivery: "/job_svc/NotifyEmailDelivery"
+    notify_email_delivery: "/job_svc/notify_email_delivery/v1"
   },
   image_bucket: System.get_env("IMAGE_BUCKET", "msvc-images"),
   image_bucket_max_age: System.get_env("IMAGE_BUCKET_MAX_AGE", "3600")
@@ -30,7 +39,7 @@ config :job_svc,
 # Database configuration (SQLite)
 # In Docker: /app/db/job_service.db
 # In dev: apps/job_svc/db/job_service.db
-database_path = System.get_env("DATABASE_PATH", "/app/db/job_service.db")
+database_path = System.get_env("DATABASE_PATH", "db/job_service.db")
 
 config :job_svc, JobService.Repo,
   database: database_path,

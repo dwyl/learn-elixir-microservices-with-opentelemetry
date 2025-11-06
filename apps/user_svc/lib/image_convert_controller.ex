@@ -15,7 +15,10 @@ defmodule ConvertImageController do
   alias Clients.JobSvcClient
 
   # Runtime config - reads from runtime.exs via environment variables
-  defp user_svc_base_url, do: Application.get_env(:user_svc, :user_svc_base_url)
+  defp user_svc_base_url, do: Application.get_env(:user_svc, :user_svc_base_url) |> dbg()
+
+  defp user_svc_image_loader,
+    do: Application.get_env(:user_svc, :user_svc_endpoints)[:image_loader] |> dbg()
 
   def convert(conn) do
     with {:ok, %Mcsv.ImageConversionRequest{} = request, new_conn} <-
@@ -68,7 +71,7 @@ defmodule ConvertImageController do
   end
 
   defp build_presigned_url(storage_id) do
-    "#{user_svc_base_url()}/user_svc/ImageLoader/#{storage_id}"
+    "#{user_svc_base_url()}#{user_svc_image_loader()}/#{storage_id}"
   end
 
   defp forward_to_job_svc(request, storage_id) do

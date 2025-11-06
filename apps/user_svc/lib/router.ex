@@ -17,7 +17,7 @@ defmodule UserRouter do
   plug(Plug.Parsers,
     parsers: [:json],
     json_decoder: Jason,
-    pass: ["application/protobuf"]
+    pass: ["application/protobuf", "application/x-protobuf"]
   )
 
   plug(:dispatch)
@@ -25,27 +25,27 @@ defmodule UserRouter do
   # RPC-style protobuf endpoints (matches services.proto)
 
   # UserService.CreateUser - Create user and trigger email workflow
-  post "/user_svc/CreateUser" do
+  post "/user_svc/create_user/v1" do
     CreateUserController.create(conn)
   end
 
   # UserService.NotifyEmailSent - Receive callback from job_svc
-  post "/user_svc/NotifyEmailSent" do
+  post "/user_svc/notify_email_sent/v1" do
     ForwardEmailNotificationController.forward(conn)
   end
 
   # UserService.ConvertImage - Initiate image conversion workflow
-  post "/user_svc/ConvertImage" do
+  post "/user_svc/convert_image/v1" do
     ConvertImageController.convert(conn)
   end
 
   # UserService.ImageLoader - Serve stored images to other services
-  get "/user_svc/ImageLoader/:job_id" do
+  get "/user_svc/image_loader/v1/:job_id" do
     ImageLoaderController.load(conn, job_id)
   end
 
   # UserService.StoreImage - Store image/PDF in MinIO and return presigned URL
-  post "/user_svc/StoreImage" do
+  post "/user_svc/store_image/v1" do
     StoreImageController.store(conn)
   end
 
@@ -55,11 +55,11 @@ defmodule UserRouter do
     send_resp(conn, 200, "OK")
   end
 
-  get "/health/ready" do
-    # Readiness check - verify dependencies
-    # TODO: Check MinIO, user_svc connectivity
-    send_resp(conn, 200, "READY")
-  end
+  # get "/health/ready" do
+  #   # Readiness check - verify dependencies
+  #   # TODO: Check MinIO, user_svc connectivity
+  #   send_resp(conn, 200, "READY")
+  # end
 
   # Prometheus metrics endpoint
   get "/metrics" do

@@ -24,7 +24,7 @@ defmodule JobRouter do
     parsers: [:json],
     json_decoder: Jason,
     # Skip parsing protobuf, let us handle it manually
-    pass: ["application/protobuf"]
+    pass: ["application/protobuf", "application/x-protobuf"]
   )
 
   plug(:dispatch)

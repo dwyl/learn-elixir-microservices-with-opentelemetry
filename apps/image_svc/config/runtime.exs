@@ -8,10 +8,12 @@ port = System.get_env("IMAGE_SVC_PORT", "8084") |> String.to_integer()
 config :image_svc,
   port: port,
   # Use USER_SVC_URL from docker-compose or fallback to localhost for dev
-  user_svc_base_url: System.get_env("USER_SVC_URL", "http://127.0.0.1:#{System.get_env("USER_SVC_PORT", "8081")}"),
+  user_svc_base_url:
+    System.get_env("USER_SVC_URL", "http://127.0.0.1:#{System.get_env("USER_SVC_PORT", "8081")}"),
   user_svc_endpoints: %{
-    store_image: "/user_svc/StoreImage",
-    notify_user: "/user_svc/NotifyUser"
+    store_image: "/user_svc/store_image/v1",
+    notify_user: "/user_svc/notify_user/v1",
+    image_loader: "/user_svc/image_loader/v1"
   }
 
 # MinIO / S3 Configuration

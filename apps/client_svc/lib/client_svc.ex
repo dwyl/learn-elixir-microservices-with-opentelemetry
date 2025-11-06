@@ -33,7 +33,6 @@ defmodule Client do
       id: "#{i}",
       name: "PB User #{i}",
       email: "pbuser#{i}@example.com",
-      bio: String.duplicate("bio for #{i} ", 1),
       type: "welcome"
     }
     |> post(base_user_url(), user_endpoints().create)
@@ -87,8 +86,7 @@ defmodule Client do
           id: "#{i}",
           name: "StreamUser #{i}",
           email: "streamuser#{i}@example.com",
-          bio: String.duplicate("bio for #{i} ", 5),
-          type: "welcome"
+          type: :EMAIL_TYPE_WELCOME
         }
         |> post(base_user_url(), user_endpoints().create)
       end,

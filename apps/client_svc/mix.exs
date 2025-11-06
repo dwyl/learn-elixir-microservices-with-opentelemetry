@@ -27,8 +27,8 @@ defmodule ClientSvc.MixProject do
     [
       extra_applications: [
         :logger,
-        :inets,
-        :os_mon,
+        # :inets,
+        # :os_mon,
         :tls_certificate_check
       ],
       mod: {ClientApp, []}
@@ -62,9 +62,11 @@ defmodule ClientSvc.MixProject do
       # OpenAPI documentation
       {:open_api_spex, "~> 3.21"},
 
-      # {:telemetry_metrics, "~> 1.1"},
+      # static tests
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
-      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      # test dependencies
+      {:yaml_elixir, "~> 2.12", only: :test}
     ]
   end
 end

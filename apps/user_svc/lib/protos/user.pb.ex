@@ -1,3 +1,13 @@
+defmodule Mcsv.EmailType do
+  @moduledoc false
+
+  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  field :EMAIL_TYPE_UNSPECIFIED, 0
+  field :EMAIL_TYPE_WELCOME, 1
+  field :EMAIL_TYPE_NOTIFICATION, 2
+end
+
 defmodule Mcsv.UserRequest do
   @moduledoc false
 
@@ -6,8 +16,7 @@ defmodule Mcsv.UserRequest do
   field :id, 1, type: :string
   field :name, 2, type: :string
   field :email, 3, type: :string
-  field :bio, 4, type: :string
-  field :type, 5, type: :string
+  field :type, 4, type: Mcsv.EmailType, enum: true
 end
 
 defmodule Mcsv.UserResponse do
