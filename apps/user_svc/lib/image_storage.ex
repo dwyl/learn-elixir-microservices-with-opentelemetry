@@ -25,11 +25,14 @@ defmodule ImageStorage do
   def store(image_binary, user_id, format \\ "png") when is_binary(image_binary) do
     case Storage.store(image_binary, user_id, format) do
       {:ok, %{storage_id: storage_id, size: size}} ->
-        Logger.info("[ImageStorage] Stored #{storage_id} for user #{user_id} (#{size} bytes)")
+        Logger.info(
+          "[User][ImageStorage] Stored #{storage_id} for user #{user_id} (#{size} bytes)"
+        )
+
         {:ok, storage_id}
 
       {:error, reason} ->
-        Logger.error("[ImageStorage] Failed to store: #{inspect(reason)}")
+        Logger.error("[User][ImageStorage] Failed to store: #{inspect(reason)}")
         {:error, reason}
     end
   end
@@ -42,11 +45,11 @@ defmodule ImageStorage do
   def fetch(storage_id) do
     case Storage.fetch(storage_id) do
       {:ok, binary} ->
-        Logger.info("[ImageStorage] Retrieved #{storage_id} (#{byte_size(binary)} bytes)")
+        Logger.info("[User][ImageStorage] Retrieved #{storage_id} (#{byte_size(binary)} bytes)")
         {:ok, binary}
 
       {:error, reason} ->
-        Logger.error("[ImageStorage] Failed to fetch: #{inspect(reason)}")
+        Logger.error("[User][ImageStorage] Failed to fetch: #{inspect(reason)}")
         {:error, :not_found}
     end
   end
@@ -59,11 +62,11 @@ defmodule ImageStorage do
   def get_presigned_url(storage_id) do
     try do
       url = Storage.generate_presigned_url(storage_id)
-      Logger.debug("[ImageStorage] Generated presigned URL for #{storage_id}")
+      Logger.debug("[User][ImageStorage] Generated presigned URL for #{storage_id}")
       {:ok, url}
     rescue
       error ->
-        Logger.warning("[ImageStorage] Failed to generate presigned URL: #{inspect(error)}")
+        Logger.warning("[User][ImageStorage] Failed to generate presigned URL: #{inspect(error)}")
         {:error, :not_found}
     end
   end
@@ -74,11 +77,11 @@ defmodule ImageStorage do
   def delete(storage_id) do
     case Storage.delete(storage_id) do
       :ok ->
-        Logger.info("[ImageStorage] Deleted #{storage_id}")
+        Logger.info("[User][ImageStorage] Deleted #{storage_id}")
         :ok
 
       {:error, reason} ->
-        Logger.warning("[ImageStorage] Failed to delete #{storage_id}: #{inspect(reason)}")
+        Logger.warning("[User][ImageStorage] Failed to delete #{storage_id}: #{inspect(reason)}")
         {:error, :not_found}
     end
   end

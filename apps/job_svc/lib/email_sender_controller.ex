@@ -19,7 +19,7 @@ defmodule EmailSenderController do
       {:ok, %Oban.Job{} = _oban_job_id} ->
         response_binary =
           encode_binary_message(
-            "[EmailSenderController]#{type} email enqueued for  #{email}",
+            "[Job][EmailSenderController]#{type} email enqueued for  #{email}",
             true
           )
 
@@ -33,7 +33,10 @@ defmodule EmailSenderController do
         )
 
         response_binary =
-          encode_binary_message("#{type} email FAILED for  #{email}", false)
+          encode_binary_message(
+            "[Job][EmailSenderController] #{type} email FAILED for  #{email}",
+            false
+          )
 
         conn
         |> put_resp_content_type("application/protobuf")

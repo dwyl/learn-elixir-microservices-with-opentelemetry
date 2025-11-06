@@ -56,7 +56,7 @@ defmodule StoreImageController do
         send_error(conn, 400, "PDF format requires user_email")
 
       {:error, reason} ->
-        Logger.error("[StoreImageController] Failed: #{inspect(reason)}")
+        Logger.error("[User][StoreImageController] Failed: #{inspect(reason)}")
         response_binary = ProtobufHelpers.build_store_failure(reason)
 
         conn
@@ -73,7 +73,7 @@ defmodule StoreImageController do
     request = Mcsv.StoreImageRequest.decode(binary_body)
 
     Logger.info(
-      "[StoreImageController] Storing #{request.format} for user #{request.user_id} " <>
+      "[User][StoreImageController] Storing #{request.format} for user #{request.user_id} " <>
         "(#{byte_size(request.image_data)} bytes)"
     )
 
@@ -94,8 +94,8 @@ defmodule StoreImageController do
       {:ok, storage_id} ->
         case ImageStorage.get_presigned_url(storage_id) do
           {:ok, presigned_url} ->
-            Logger.info("[StoreImageController] Success: #{storage_id}")
-            Logger.debug("[StoreImageController] Presigned URL: #{presigned_url}")
+            Logger.info("[User][StoreImageController] Success: #{storage_id}")
+            Logger.debug("[User][StoreImageController] Presigned URL: #{presigned_url}")
             {:ok, storage_id, presigned_url}
 
           {:error, reason} ->

@@ -37,9 +37,9 @@ config :job_svc,
   image_bucket_max_age: System.get_env("IMAGE_BUCKET_MAX_AGE", "3600")
 
 # Database configuration (SQLite)
-# In Docker: /app/db/job_service.db
-# In dev: apps/job_svc/db/job_service.db
-database_path = System.get_env("DATABASE_PATH", "db/job_service.db")
+# In Docker: /app/db/service.db
+# In dev: db/service.db
+database_path = System.get_env("DATABASE_PATH", "db/service.db")
 
 config :job_svc, JobService.Repo,
   database: database_path,
@@ -62,12 +62,33 @@ config :ex_aws, :s3,
 
 # OpenTelemetry Configuration
 config :opentelemetry,
-  service_name: System.get_env("OTEL_SERVICE_NAME", "job_svc"),
+  service_name: "job_svc",
   traces_exporter: :otlp
 
+# Determine OTLP protocol from environment variable
+# Options: "http" (default) or "grpc" (production)
+otlp_protocol =
+  case System.get_env("OTEL_EXPORTER_OTLP_PROTOCOL", "http") do
+    "grpc" ->
+      :grpc
+
+    "http" ->
+      :http_protobuf
+
+    other ->
+      IO.warn("Unknown OTLP protocol '#{other}', defaulting to :http_protobuf")
+      :http_protobuf
+  end
+
+otlp_endpoint =
+  case System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT") do
+    nil -> "http://127.0.0.1:4318"
+    endpoint -> endpoint
+  end
+
 config :opentelemetry_exporter,
-  otlp_protocol: :http_protobuf,
-  otlp_endpoint: System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318")
+  otlp_protocol: otlp_protocol,
+  otlp_endpoint: otlp_endpoint
 
 # Logger Configuration
 log_level = System.get_env("LOG_LEVEL", "info") |> String.to_atom()

@@ -18,11 +18,11 @@ defmodule EmailNotificationController do
   def notify(conn) do
     with {:ok, _response, binary_body, new_conn} <- decode_response(conn),
          {:ok, _} <- UserSvcClient.notify_email_sent(binary_body) do
-      Logger.info("[EmailNotificationController] Notification forwarded successfully")
+      Logger.info("[Job][EmailNotificationController] Notification forwarded successfully")
       send_resp(new_conn, 204, "")
     else
       {:error, reason} ->
-        Logger.error("[EmailNotificationController] Failed: #{inspect(reason)}")
+        Logger.error("[Job][EmailNotificationController] Failed: #{inspect(reason)}")
         send_resp(conn, 204, "")
     end
   end
@@ -36,7 +36,7 @@ defmodule EmailNotificationController do
     response = Mcsv.EmailResponse.decode(binary_body)
 
     Logger.info(
-      "[EmailNotificationController] Email delivery status: #{response.success}, message: #{response.message}"
+      "[Job][EmailNotificationController] Email delivery status: #{response.success}, message: #{response.message}"
     )
 
     {:ok, response, binary_body, new_conn}

@@ -10,12 +10,33 @@ config :email_svc,
 
 # OpenTelemetry Configuration
 config :opentelemetry,
-  service_name: System.get_env("OTEL_SERVICE_NAME", "email_svc"),
+  service_name: "email_svc",
   traces_exporter: :otlp
 
+# Determine OTLP protocol from environment variable
+# Options: "http" (default) or "grpc" (production)
+otlp_protocol =
+  case System.get_env("OTEL_EXPORTER_OTLP_PROTOCOL", "http") do
+    "grpc" ->
+      :grpc
+
+    "http" ->
+      :http_protobuf
+
+    other ->
+      IO.warn("Unknown OTLP protocol '#{other}', defaulting to :http_protobuf")
+      :http_protobuf
+  end
+
+otlp_endpoint =
+  case System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT") do
+    nil -> "http://127.0.0.1:4318"
+    endpoint -> endpoint
+  end
+
 config :opentelemetry_exporter,
-  otlp_protocol: :http_protobuf,
-  otlp_endpoint: System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318")
+  otlp_protocol: otlp_protocol,
+  otlp_endpoint: otlp_endpoint
 
 # Logger Configuration
 log_level = System.get_env("LOG_LEVEL", "info") |> String.to_atom()

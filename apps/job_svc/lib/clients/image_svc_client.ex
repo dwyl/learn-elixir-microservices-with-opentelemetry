@@ -46,16 +46,16 @@ defmodule JobService.Clients.ImageSvcClient do
           # Logger.info("[ImageSvcClient] Conversion acknowledged: #{response.message}")
           :ok
         else
-          Logger.error("[ImageSvcClient] Conversion failed: #{response.message}")
+          Logger.error("[Job][ImageSvcClient] Conversion failed: #{response.message}")
           {:error, response.message}
         end
 
       {:ok, %{status: status}} ->
-        Logger.error("[ImageSvcClient] HTTP #{status}")
+        Logger.error("[Job][ImageSvcClient] HTTP #{status}")
         {:error, "HTTP #{status}"}
 
       {:error, reason} ->
-        Logger.error("[ImageSvcClient] Request failed: #{inspect(reason)}")
+        Logger.error("[Job][ImageSvcClient] Request failed: #{inspect(reason)}")
         {:error, reason}
     end
   end

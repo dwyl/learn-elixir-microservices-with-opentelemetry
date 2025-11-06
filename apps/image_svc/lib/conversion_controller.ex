@@ -54,53 +54,84 @@ defmodule ImageSvc.ConversionController do
   )
 
   def convert(conn) do
-    with {:ok, request, conn} <- decode_request(conn),
+    with {:ok, request, new_conn} <- decode_request(conn),
          {:ok, image_binary} <- fetch_image(request.image_url),
          {:ok, image_info} <- get_image_info(image_binary),
          {:ok, output_size} <- perform_conversion(request, image_binary) do
       response_binary = ResponseBuilder.build_ack_response(image_info, output_size)
 
-      conn
+      new_conn
       |> put_resp_content_type("application/protobuf")
       |> send_resp(200, response_binary)
     else
-      {:error, :fetch_failed, status} ->
-        handle_fetch_error(conn, status)
+      {:error, reason, _} ->
+        Logger.error("[Image][ConversionController] Error: #{inspect(reason)}")
+        return_err(conn, inspect(reason))
 
-      {:error, :conversion_failed, reason} ->
-        handle_conversion_error(conn, reason)
+      {:error, reason} ->
+        Logger.error("[Image][ConversionController] Error: #{inspect(reason)}")
+        return_err(conn, inspect(reason))
+        # {:error, :fetch_failed, status} ->
+        #   handle_fetch_error(conn, status)
 
-      {:error, :storage_failed, reason} ->
-        handle_storage_error(conn, reason)
+        # {:error, :conversion_failed, reason} ->
+        #   handle_conversion_error(conn, reason)
+
+        # {:error, :storage_failed, reason} ->
+        #   handle_storage_error(conn, reason)
     end
   end
 
   # Request processing
 
   defp decode_request(conn) do
-    case Plug.Conn.read_body(conn) do
-      {:ok, binary_body, new_conn} ->
-        {:ok, Mcsv.ImageConversionRequest.decode(binary_body), new_conn}
-
+    with {:ok, binary_body, new_conn} <- Plug.Conn.read_body(conn),
+         {:ok, request} <- maybe_decode_request(binary_body) do
+      {:ok, request, new_conn}
+    else
       {:error, reason} ->
         {:error, reason}
     end
   end
 
+  @doc """
+  Attempts to decode the binary body into an EmailRequest protobuf.
+  ## Parameters
+    - binary_body: The raw binary body from the HTTP request.
+  ## Returns
+    - {:ok, %Mcsv.PdfReadyNotification{}} on success
+    - {:error, :decode_error} on failure
+
+      iex> DeliveryController.maybe_decode_email_request(1)
+      {:error, :decode_error}
+  r
+  """
+
+  def maybe_decode_request(binary_body) do
+    try do
+      %Mcsv.ImageConversionRequest{} = resp = Mcsv.ImageConversionRequest.decode(binary_body)
+      {:ok, resp}
+    catch
+      :error, reason ->
+        Logger.error("[Image][ConversionController] Protobuf decode error: #{inspect(reason)}")
+        {:error, :decode_error}
+    end
+  end
+
   defp fetch_image(image_url) do
-    Logger.info("[ConversionController] Fetching image from URL: #{image_url}")
+    Logger.info("[Image][ConversionController] Fetching image: #{image_url}")
 
     case Req.get(image_url) do
       {:ok, %{status: 200, body: image_binary}} ->
-        Logger.info("[ConversionController] Fetched #{byte_size(image_binary)} bytes")
+        Logger.info("[Image][ConversionController] Fetched #{byte_size(image_binary)} bytes")
         {:ok, image_binary}
 
       {:ok, %{status: status}} ->
-        Logger.error("[ConversionController] Failed to fetch image: HTTP #{status}")
+        Logger.error("[Image][ConversionController] Failed to fetch image: HTTP #{status}")
         {:error, :fetch_failed, status}
 
       {:error, reason} ->
-        Logger.error("[ConversionController] Failed to fetch image: #{inspect(reason)}")
+        Logger.error("[Image][ConversionController] Failed to fetch image: #{inspect(reason)}")
         {:error, :fetch_failed, reason}
     end
   end
@@ -109,12 +140,16 @@ defmodule ImageSvc.ConversionController do
     case ImageConverter.get_image_info(image_binary) do
       {:ok, info} ->
         Logger.info(
-          "[ConversionController] Image: #{info.format} #{info.width}x#{info.height}, #{info.size} bytes"
+          "[Image][ConversionController] Image: #{info.format} #{info.width}x#{info.height}, #{info.size} bytes"
         )
 
         {:ok, info}
 
       {:error, reason} ->
+        Logger.error(
+          inspect("[Image][ConversionController] Failed to get image info: #{inspect(reason)}")
+        )
+
         {:error, :image_info_failed, reason}
     end
   end
@@ -137,7 +172,10 @@ defmodule ImageSvc.ConversionController do
            store_pdf(request, pdf_binary) do
       # Note: Client is already notified by user_svc/StoreImageController
       # No need for separate notification here
-      Logger.info("[ConversionController] Conversion complete - client notified by user_svc")
+      Logger.info(
+        "[Image][ConversionController] Conversion complete - client notified by user_svc"
+      )
+
       {:ok, byte_size(pdf_binary)}
     else
       error ->
@@ -149,11 +187,14 @@ defmodule ImageSvc.ConversionController do
   defp convert_to_pdf(image_binary, opts) do
     case ImageConverter.convert(image_binary, opts) do
       {:ok, pdf_binary} ->
-        Logger.info("[ConversionController] Converted to PDF: #{byte_size(pdf_binary)} bytes")
+        Logger.info(
+          "[Image][ConversionController] Converted to PDF: #{byte_size(pdf_binary)} bytes"
+        )
+
         {:ok, pdf_binary}
 
       {:error, reason} ->
-        Logger.error("[ConversionController] Conversion failed: #{reason}")
+        Logger.error("[Image][ConversionController] Conversion failed: #{reason}")
         {:error, :conversion_failed, reason}
     end
   end
@@ -167,49 +208,60 @@ defmodule ImageSvc.ConversionController do
          ) do
       {:ok, %{success: true} = store_response} ->
         Logger.info(
-          "[ConversionController] PDF stored successfully: #{store_response.storage_id}"
+          "[Image][ConversionController] PDF stored successfully: #{store_response.storage_id}"
         )
 
         {:ok, store_response}
 
       {:ok, %{success: false, message: message}} ->
-        Logger.error("[ConversionController] Storage failed: #{message}")
+        Logger.error("[Image][ConversionController] Storage failed: #{message}")
         {:error, :storage_failed, message}
 
       {:error, reason} ->
-        Logger.error("[ConversionController] Failed to store PDF: #{inspect(reason)}")
+        Logger.error("[Image][ConversionController] Failed to store PDF: #{inspect(reason)}")
         {:error, :storage_failed, reason}
     end
   end
 
   # Error handlers
 
-  defp handle_fetch_error(conn, status) do
+  defp return_err(conn, msg) do
     response_binary =
-      ResponseBuilder.build_failure_response("Failed to fetch image: HTTP #{status}")
+      ResponseBuilder.build_failure_response(msg)
 
     conn
     |> put_resp_content_type("application/protobuf")
     |> send_resp(500, response_binary)
   end
 
-  defp handle_conversion_error(conn, reason) do
-    # Notify user_svc of failure (for cleanup)
-    # We don't have request context here, so this is best effort
-    Logger.warning("[ConversionController] Skipping failure notification - no storage_id context")
+  # defp handle_fetch_error(conn, status) do
+  #   response_binary =
+  #     ResponseBuilder.build_failure_response("Failed to fetch image: HTTP #{status}")
 
-    response_binary = ResponseBuilder.build_failure_response(reason)
+  #   conn
+  #   |> put_resp_content_type("application/protobuf")
+  #   |> send_resp(500, response_binary)
+  # end
 
-    conn
-    |> put_resp_content_type("application/protobuf")
-    |> send_resp(500, response_binary)
-  end
+  # # Notify user_svc of failure (for cleanup)
+  # # We don't have request context here, so this is best effort
+  # defp handle_conversion_error(conn, reason) do
+  #   Logger.warning("[ConversionController] Skipping failure notification - no storage_id context")
 
-  defp handle_storage_error(conn, reason) do
-    response_binary = ResponseBuilder.build_failure_response("Storage failed: #{inspect(reason)}")
+  #   response_binary =
+  #     ResponseBuilder.build_failure_response(reason)
 
-    conn
-    |> put_resp_content_type("application/protobuf")
-    |> send_resp(500, response_binary)
-  end
+  #   conn
+  #   |> put_resp_content_type("application/protobuf")
+  #   |> send_resp(500, response_binary)
+  # end
+
+  # defp handle_storage_error(conn, reason) do
+  #   response_binary =
+  #     ResponseBuilder.build_failure_response("Storage failed: #{inspect(reason)}")
+
+  #   conn
+  #   |> put_resp_content_type("application/protobuf")
+  #   |> send_resp(500, response_binary)
+  # end
 end

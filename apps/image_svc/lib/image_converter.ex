@@ -26,6 +26,32 @@ defmodule ImageConverter do
   require Logger
 
   @doc """
+  Check if ImageMagick is installed and available.
+
+  ## Examples
+
+      iex> ImageConverter.check_imagemagick()
+      {:ok, _}
+      {:error, _} -> {:error, "ImageMagick not found"}
+  """
+  def check_imagemagick do
+    case System.cmd("magick", ["-version"]) do
+      {output, 0} ->
+        # Extract version from first line
+        version =
+          output
+          |> String.split("\n")
+          |> List.first()
+          |> String.trim()
+
+        {:ok, version}
+
+      {_error, _} ->
+        {:error, "ImageMagick not found"}
+    end
+  end
+
+  @doc """
   Convert PNG binary to PDF binary using ImageMagick.
 
   ## Examples
@@ -35,8 +61,9 @@ defmodule ImageConverter do
       iex> File.write!("output.pdf", pdf_binary)
   """
   def png_to_pdf(png_binary) when is_binary(png_binary) do
-    Task.async(fn -> convert(png_binary, input_format: "png", output_format: "pdf") end)
-    |> Task.await(:infinity)
+    # Task.async(fn -> convert(png_binary, input_format: "png", output_format: "pdf") end)
+    # |> Task.await(:infinity)
+    convert(png_binary, input_format: "png", output_format: "pdf")
   end
 
   @doc """
@@ -97,7 +124,7 @@ defmodule ImageConverter do
           max_height
         )
 
-      Logger.debug("ImageMagick: magick convert #{inspect(args)}")
+      Logger.debug("[Image] ImageMagick: magick convert #{inspect(args)}")
 
       # Run ImageMagick convert command
       # ImageMagick v7 uses "magick convert"
@@ -108,9 +135,11 @@ defmodule ImageConverter do
           {:ok, pdf_binary}
 
         {error, exit_code} ->
-          Logger.error("ImageMagick conversion failed (exit #{exit_code}): #{error}")
-          {:error, "Conversion failed: #{error}"}
+          Logger.error("[Image] ImageMagick conversion failed (exit #{exit_code}): #{error}")
+          {:error, "[Image] Conversion failed: #{error}"}
       end
+    catch
+      _ -> {:error, "[Image] Conversion failed"}
     after
       # Clean up temp files
       File.rm(tmp_input)
@@ -154,39 +183,16 @@ defmodule ImageConverter do
                }}
 
             _ ->
-              {:error, "Could not parse image info"}
+              {:error, "[Image] Could not parse image info"}
           end
 
         {error, _exit_code} ->
-          {:error, "Failed to get image info: #{error}"}
+          {:error, "[Image] Failed to get image info: #{error}"}
       end
+    catch
+      _ -> {:error, "[Image] Failed to get image info"}
     after
       File.rm(tmp_file)
-    end
-  end
-
-  @doc """
-  Check if ImageMagick is installed and available.
-
-  ## Examples
-
-      iex> ImageConverter.check_imagemagick()
-      {:ok, "ImageMagick 7.1.1-15"}
-  """
-  def check_imagemagick do
-    case System.cmd("magick", ["-version"]) do
-      {output, 0} ->
-        # Extract version from first line
-        version =
-          output
-          |> String.split("\n")
-          |> List.first()
-          |> String.trim()
-
-        {:ok, version}
-
-      {_error, _} ->
-        {:error, "ImageMagick not found. Install with: brew install imagemagick"}
     end
   end
 

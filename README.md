@@ -1,28 +1,35 @@
-# Microservices with Elixir and HTTP "twirp" like communication
+# Discover Microservices with Elixir with Observability
 
-This is a demo of an **Plug/Elixir-based microservices architecture** demonstrating PNG-to-PDF image conversion with email notifications. The system uses:
+This is a demo of an **Plug/Elixir-based microservices architecture** demonstrating PNG-to-PDF image conversion with email notifications.
 
-- **Plug** only Elixir app (no Phoenix)
-- **Bandit** for HTTP servers
-- **Protobuf** for inter-service communication serialization
-- **Oban** for background job processing backed with **SQLite**
-- **Req** for HTTP client
-- **Swoosh** for email delivery
-- **ImageMagick** for image conversion
-- **MinIO** for S3 compatible local-cloud storage
-- **OpenTelemetry** with **Jaeger** for traces
-- **Promtail** with **Loki** linked to MinIO for logs
-- **Prometheus** for metrics
-- **Grafana** for global dashboards
+The idea of this demo is to use OpenAPI, protocol buffers and use OpenTelemetry to enable the three components of observablity, logs, traces and metrics.
 
-We run 5 Elixir apps as microservices communicating via **Protobuf serialization over HTTP/1** and instrumented with OpenTelemetry.
+The system uses quite a few technologies.
 
-It is designed openAPI-first ➡ Code as this is the easiest way to build contracts between services and design the proto files accordingly.
-In turn, the proto contracts provides strong type safety, is easy to design and enforces the contract-first approach.
+- `Plug` for simple `Elixir` app
+- `Bandit` for HTTP servers
+- Protocol buffers for inter-service communication serialization
+- `Oban` for background job processing backed with the database `SQLite`
+- `Req` for HTTP client
+- `Swoosh` for email delivery
+- `ImageMagick` for image conversion
+- `MinIO` for S3 compatible local-cloud storage
+- `OpenTelemetry` with `Jaeger` for traces
+- `Promtail` with `Loki` linked to `MinIO` for logs
+- `Prometheus` for metrics
+- `Grafana` for global dashboards
+- `PromEx` for helping to setup `Grafana` dashboards
 
-Routes follow a **Twirp-like RPC DSL** (`/service_name/method_name`) instead of traditional REST (`/resource/`).
+We run 5 `Elixir` apps as microservices communicating via Protocol buffers for serialization over **HTTP/1**.
+We instrumented the app with `OpenTelemetry`.
 
-The main interest of this demo is the orchestration of all the observability tools with OpenTelemetry in Elixir.
+It is designed [API-first ➡ Code] as this is the easiest way to build contracts between services and design the proto files accordingly.
+
+In turn, the proto contracts provides strong type safety. They are rather easy to design (_as long as you don't use the full gRPC methods and transport protocol_) and enforces the contract-first approach.
+
+Routes follow a `Twirp`-like RPC DSL, with a format `/service_name/method_name` instead of traditional REST (`/resource`).
+
+The main interest of this demo is the orchestration of all the observability tools with OpenTelemetry in `Elixir`.
 
 ## Services Overview
 
@@ -67,20 +74,20 @@ architecture-beta
 
 </details>
 
-### client_svc (:8085)
+### Client service
 
 - **Purpose**: External client interface for testing
 - **Key Features**:
-  - User creation with concurrent streaming
-  - PNG conversion testing client
+  - triggers User creation with concurrent streaming
+  - triggers PNG conversion of PNG images
   - Receives final workflow callbacks
-- **Endpoints**: `/client_svc/ReceiveNotification`
+- **Endpoints**: `/client_svc/receive_email_notification`
 
-### user_svc (:8081)
+### User service
 
 - **Purpose**: Entry Gateway for user operations and workflow orchestration
 - **Key Features**:
-  - User creation and email job triggering
+  - User creation and email job dispatch
   - Image conversion workflow orchestration
   - Image storage with presigned URLs
   - Completion callback relay to clients
@@ -90,7 +97,7 @@ architecture-beta
   - `/user_svc/image_loader/:storage_id`
   - `/user_svc/conversion_complete`
 
-### job_svc (:8082)
+### Job service
 
 - **Purpose**: Background job processing orchestrator
 - **Key Features**:
@@ -103,7 +110,7 @@ architecture-beta
   - `/job_svc/convert_image`
   - `/job_svc/email_notification`
 
-### email_svc (:8083)
+### Email service
 
 - **Purpose**: Email delivery service
 - **Key Features**:
@@ -112,7 +119,7 @@ architecture-beta
   - Delivery callbacks
 - **Endpoints**: `/email_svc/deliver_email`
 
-#### image_svc (:8084)
+### Image service
 
 - **Purpose**: Image conversion service
 - **Key Features**:
@@ -141,7 +148,7 @@ sequenceDiagram
     Image -->>Client: image converted & ready
 ```
 
-This workflow demonstrates async email notifications using Oban and Swoosh. The system can handle 1000+ concurrent user creation events, each triggering a welcome email.
+This workflow demonstrates async email notifications using Oban and Swoosh.
 
 <img src="priv/email-sequence.png">
 
@@ -159,14 +166,14 @@ This workflow demonstrates async email notifications using Oban and Swoosh. The 
    - Enqueues Oban job (EmailWorker)
    - Returns immediately (async from here)
    - Worker picks up job from SQLite queue
-5. **EmailWorker** → `email_svc/DeliverEmail` (protobuf: EmailRequest)
+5. **EmailWorker** → `email_svc/deliver_email` (protobuf: EmailRequest)
 6. **email_svc**:
    - Generates email from template (welcome, notification, etc.)
    - Sends via Swoosh mailer
-7. **email_svc** → `job_svc/EmailNotification` (callback: EmailResponse)
+7. **email_svc** → `job_svc/email_notification` (callback: EmailResponse)
    - Confirms delivery status
-8. **job_svc** → `user_svc/ConversionComplete` (optional: notify completion)
-9. **user_svc** → `client_svc/ReceiveNotification` (final callback)
+8. **job_svc** → `user_svc/conversion_complete` (optional: notify completion)
+9. **user_svc** → `client_svc/receive_notification` (final callback)
 
 **Key Features**:
 
@@ -179,118 +186,42 @@ This workflow demonstrates async email notifications using Oban and Swoosh. The 
 
 This workflow demonstrates efficient binary data handling using the "Pull Model" or "Presigned URL Pattern" (similar to AWS S3). Instead of passing large image binaries through the service chain, only metadata and URLs are transmitted.
 
-<img src="priv/image-sequence.png">
-
-**Key Patterns Demonstrated**:
-
 - **Pull Model & Presigned URLs**: Image service fetches data on-demand via temporary URLs (using AWS S3 pattern)
-- **Concurrent Flow**: `Task.async_stream` for parallel client requests and Oban for true async background jobs; workers poll the database independently, fully decoupled from the request flow with automatic retry logic.
 
-**Problem**: We cannot pass the image binary through the chain as each step would copy the image, causing memory pressure.
-
-**Solution**: The image service pulls data when needed via a presigned URL.
+<img src="priv/image-sequence.png">
 
 **Detailed Flow**:
 
-1. **Client** → `user_svc/ConvertImage` (protobuf with image_data binary)
+1. Client → POST to `user_svc/ConvertImage` (protobuf with image_data binary)
    - Only binary transfer to user service
-2. **user_svc**:
-   - Stores image in memory using Agent (ImageStorage GenServer)
+2. user_svc:
+   - Stores image in S3
    - Generates storage*id: `"job*#{UUID}"`
-   - Creates presigned URL: `http://localhost:8081/user_svc/ImageLoader/{storage_id}`
+   - Creates presigned URL: `http://user_svc:8081/user_svc/image_loader/v1/{storage_id}`
    - Returns immediate acknowledgment to client
-3. **user_svc** → `job_svc/ConvertImage` (protobuf with image_url, NO BINARY)
-   - Tiny metadata request: `{image_url, user_id, user_email, quality, dimensions}`
-4. **job_svc**:
+3. user_svc → POST to `job_svc/convert_image` (protobuf with image_url)
+4. job_svc:
    - Enqueues Oban job (ImageConversionWorker) with image_url
    - Returns immediately (async from here)
    - Worker picks up job from SQLite queue
-5. **ImageConversionWorker** → `image_svc/ConvertImage` (protobuf with image_url, NO BINARY)
+5. ImageConversionWorker → `image_svc/convert_image` (protobuf with image_url)
    - Passes URL reference and conversion options
-6. **image_svc** → `user_svc/ImageLoader/{storage_id}` (HTTP GET)
+6. image_svc → GET `user_svc/image_loader/{storage_id}`
    - Fetches the image binary on-demand (1st binary transfer)
    - Enables retry logic if fetch fails
-7. **image_svc**:
-   - Converts PNG → PDF using ImageMagick
+7. image_svc:
+   - Converts PNG → PDF using `ImageMagick`
    - Applies quality settings, resizing, metadata stripping
    - Measures processing metrics
-8. **image_svc** → Returns PDF binary in response (2nd binary transfer)
-9. **job_svc** → `email_svc/DeliverEmail` (sends completion notification)
-10. **email_svc** → Sends "conversion complete" email to user
-11. **job_svc** → `user_svc/ConversionComplete` (notifies completion)
-12. **user_svc**:
+8. image_svc → Returns PDF binary in response (2nd binary transfer)
+9. job_svc → `email_svc/DeliverEmail` (sends completion notification)
+10. email_svc → Sends "conversion complete" email to user
+11. job_svc → `user_svc/ConversionComplete` (notifies completion)
+12. user_svc:
     - Cleans up stored image from memory
     - Relays completion to client
-13. **user_svc** → `client_svc/ReceiveNotification` (final callback with result)
+13. user_svc → `client_svc/ReceiveNotification` (final callback with result)
 
-**Key Benefits**:
-
-- **Memory Efficiency**: Only 2 binary transfers (client→user, image_svc→user) instead of 5+
-- **Retry Logic**: Image service can retry failed fetches without re-uploading
-- **Scalability**: Intermediate services (job_svc) don't hold binary data
-- **Temporary Storage**: Images auto-expire from memory after processing
-- **URL-based**: Clean separation between data storage and processing
-
-**Binary Transfer Summary**:
-
-- ✅ Client → user_svc: Image binary (upload)
-- ✅ image_svc ← user_svc: Image binary (on-demand fetch)
-- ✅ image_svc → job_svc: PDF binary (result)
-- ❌ user_svc → job_svc: NO binary (only URL)
-- ❌ job_svc → image_svc: NO binary (only URL)
-
-1. client_svc (local) → user_svc (Docker)
-   POST /user_svc/CreateUser ✅ 200 in 25ms
-
-2. user_svc → job_svc
-   POST /job_svc/EnqueueEmail ✅ 200 in 15ms
-
-3. job_svc → Oban (SQLite database we just fixed!)
-   [EmailSenderController] Enqueued welcome email ✅
-
-4. Oban Worker → email_svc
-   POST /email_svc/SendEmail ✅ 200 in 1ms
-
-5. email_svc → job_svc
-   POST /job_svc/NotifyEmailDelivery ✅ 204 in 24ms
-
-6. job_svc → user_svc
-   POST /user_svc/NotifyEmailSent ✅ 204 in 20ms
-
-7. user_svc → client_svc
-   ❌ Failed: :nxdomain (EXPECTED - see below)
-
----
-
-1. client_svc (local) → user_svc (Docker)
-   POST /user_svc/ConvertImage ✅ 200 in 82ms
-
-2. user_svc → MinIO
-   Stored PNG: 1762116318739366_hyDntSpbYes.png (10011 bytes) ✅
-
-3. user_svc → job_svc
-   POST /job_svc/ConvertImage ✅ 200 in 15ms
-
-4. Oban Worker (SQLite database we fixed!)
-   [ImageConversionWorker] Processing conversion job 5 ✅
-
-5. job_svc → image_svc
-   POST /image_svc/ConvertImage ✅
-
-6. image_svc → user_svc
-   GET /user_svc/ImageLoader (fetch PNG from MinIO) ✅
-
-7. ImageMagick Conversion
-   PNG 1920x1080 → PDF (9610 bytes) ✅
-
-8. image_svc → user_svc (the endpoint we just fixed!)
-   POST /user_svc/StoreImage ✅ 200 in 10ms
-
-9. user_svc → MinIO
-   Stored PDF: 1762116318937316_7CjhIdQpjf8.pdf (9610 bytes) ✅
-
-10. user_svc → client_svc
-    ⚠️ :nxdomain (EXPECTED - client_svc is local, not in Docker)
 
 ### API Design and Documentation
 
@@ -317,13 +248,13 @@ You have the option to enforce runtime checks. The **OpenApiSpex** runtime spec 
 
 The type safety of the protobuf serialization covers and the integration tests cover however most of the endpoints.
 
-| Service | OpenApiSpex Runtime | Manual YAML |
-|---------|:------------------:|:-----------:|
-| client_svc | ❌ No | ✅ Yes |
-| user_svc | ❌ No | ✅ Yes |
-| job_svc | ❌ No | ✅ Yes |
-| image_svc | ✅ Yes | ✅ Yes |
-| email_svc | ❌ No | ✅ Yes |
+| Service    | OpenApiSpex Runtime | Manual YAML |
+| ---------- | :-----------------: | :---------: |
+| client_svc |        ❌ No         |    ✅ Yes    |
+| user_svc   |        ❌ No         |    ✅ Yes    |
+| job_svc    |        ❌ No         |    ✅ Yes    |
+| image_svc  |        ✅ Yes        |    ✅ Yes    |
+| email_svc  |        ❌ No         |    ✅ Yes    |
 
 **image_svc Implementation** (reference example):
 
@@ -372,11 +303,11 @@ We used `Swagger` and `Redoc` to generate online documentation of the APIs.
 
 **Interactive Documentation**:
 
-| Tool | URL | Best For |
-|------|-----|----------|
-| **Redoc** | http://localhost:8080 | Beautiful reading experience, onboarding |
-| **Swagger UI** | http://localhost:8085 | Interactive API testing ("Try it out" button) |
-| **Landing Page** | [openapi/index.html](openapi/index.html) | Quick links to all services & observability |
+| Tool             | URL                                      | Best For                                      |
+| ---------------- | ---------------------------------------- | --------------------------------------------- |
+| **Redoc**        | http://localhost:8080                    | Beautiful reading experience, onboarding      |
+| **Swagger UI**   | http://localhost:8085                    | Interactive API testing ("Try it out" button) |
+| **Landing Page** | [openapi/index.html](openapi/index.html) | Quick links to all services & observability   |
 
 **Swagger UI Service Selector**:
 
@@ -439,12 +370,12 @@ Firtly a quote:
 
 > "Logs, metrics, and traces are often known as the three pillars of observability. While plainly having access to logs, metrics, and traces doesn’t necessarily make systems more observable, these are powerful tools that, if understood well, can unlock the ability to build better systems."
 
-| System | Purpose |
-| --     | -- |
-| Prometheus | Metrics scrapper|
-| Loki | Logs scrapper|
-| Jaeger |Traces collection|
-| Grafana | Reporting & Dashboards |
+| System     | Purpose                |
+| ---------- | ---------------------- |
+| Prometheus | Metrics scrapper       |
+| Loki       | Logs scrapper          |
+| Jaeger     | Traces collection      |
+| Grafana    | Reporting & Dashboards |
 
 Some explanations about **who does what?**:
 
@@ -469,13 +400,13 @@ Some explanations about **who does what?**:
   "Where did this request fail?"
   "What's the call graph?"
 
-|   System    |   Model     |   Format    |    Storage      |
-|--           | --          | --          |--               |
-| Prometheus  | PULL (scrape)| Plain text  | Disk (TS-DB)     |
-|  | GET /metrics Every 15s | key=value   | prometheus-data  |
-| Loki via Promtail       | PUSH  Batched       | JSON (logs) structured| MinIO (S3) loki-chunks     |
-| Jaeger      | PUSH OTLP        | Protobuf (spans)   │|Memory only! Lost on restart   |
-| Grafana     | N/A (UI)     | N/A         | SQLite   (dashboards only)       |
+| System            | Model                  | Format                 | Storage                      |
+| ----------------- | ---------------------- | ---------------------- | ---------------------------- |
+| Prometheus        | PULL (scrape)          | Plain text             | Disk (TS-DB)                 |
+|                   | GET /metrics Every 15s | key=value              | prometheus-data              |
+| Loki via Promtail | PUSH  Batched          | JSON (logs) structured | MinIO (S3) loki-chunks       |
+| Jaeger            | PUSH OTLP              | Protobuf (spans)   │   | Memory only! Lost on restart |
+| Grafana           | N/A (UI)               | N/A                    | SQLite   (dashboards only)   |
 
 ### Data flow between Services
 
@@ -827,12 +758,45 @@ These `*.pb.ex` files should be used in every app that uses this contract to exc
 
 ## OpenTelemetry
 
+### Spans
+
+```elixir
+require OpenTelemetry.Tracer, as: Tracer
+require OpenTelemetry.Span, as: Span
+
+def function_to_span(...) do
+  Tracer.with_span "#{__MODULE__}.create/1" do
+    Tracer.set_attribute(:value, i)
+    ok
+  end
+  [...]
+```
+
+- Propagate spans
+  
+
 [TODO]
+
+`:otel_propagator_text_map.inject`:
 
 ```elixir
 # Inject OpenTelemetry trace context into job args
     trace_headers = :otel_propagator_text_map.inject([])
     trace_context = Map.new(trace_headers)
+```
+
+- add `:opentelemetry_req`
+- use `OpentelemetryReq.attach(propagate_trace_headers: true)`
+
+```elixir
+Req.post(
+   Req.new(base_url: base)
+    |> OpentelemetryReq.attach(propagate_trace_headers: true),
+     url: path,
+     body: body,
+      headers: [{"content-type", "application/protobuf"}],
+      receive_timeout: receive_timeout
+) 
 ```
 
 ## [TODO] Move this! Misc tips & tricks
@@ -876,11 +840,10 @@ Connect to the "msvc-client-svc" container and get an IEX session to run command
 docker exec -it msvc-client-svc bin/client_svc remote
 
 iex(client_svc@b6d94600b7e3)4> 
-   Enum.to_list(1..20) 
+   Enum.to_list(1..1000) 
    |> Task.async_stream(fn i -> Client.create(i) end, max_concurrency: 10, ordered: false) 
    |> Stream.run
 
-# :ok
 
 iex(client_svc@b6d94600b7e3)5>
    List.duplicate("lib/client_svc-0.1.0/priv/test.png", 100) 
@@ -888,7 +851,11 @@ iex(client_svc@b6d94600b7e3)5>
          fn file -> ImageClient.convert_png(file, "m@com") 
       end)
    |> Stream.run()
+
+iex(client_svc@b6d94600b7e3)6> Stream.interate(50) |> Task.async_stream(fn _ -> Client.create(1) end, max_concurrenccy: 10, orderede: false) |> Stream.run()
+# :ok
 ```
+
 
 ## COCOMO Complexity Analysis of this project
 

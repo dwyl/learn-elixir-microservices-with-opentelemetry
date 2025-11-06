@@ -3,6 +3,14 @@ import Config
 # NOTE: Runtime configuration (ports, URLs, credentials) is in config/runtime.exs
 # This file only contains compile-time configuration
 
+# Configure Ecto repos (database path is in runtime.exs)
+config :image_svc,
+  ecto_repos: [ImageService.Repo],
+  adapter: Ecto.Adapters.SQLite3,
+  default_transaction_mode: :immediate,
+  show_sensitive_data_on_connection_error: true,
+  pool_size: 5
+
 # PromEx configuration for Prometheus metrics
 config :image_svc, ImageSvc.PromEx,
   disabled: false,

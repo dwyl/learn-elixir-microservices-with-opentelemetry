@@ -25,7 +25,9 @@ defmodule ImageSvc.UserSvcClient do
   - `{:error, reason}` on failure
   """
   def store_pdf(pdf_binary, user_id, original_storage_id, user_email) do
-    Logger.info("[UserSvcClient] Uploading PDF to storage (#{byte_size(pdf_binary)} bytes)")
+    Logger.info(
+      "[Image][UserSvcClient] Uploading PDF to storage (#{byte_size(pdf_binary)} bytes)"
+    )
 
     request_binary =
       %Mcsv.StoreImageRequest{
@@ -42,10 +44,10 @@ defmodule ImageSvc.UserSvcClient do
         {:ok, Mcsv.StoreImageResponse.decode(body)}
 
       {:ok, %Req.Response{status: status}} ->
-        {:error, "HTTP #{status}"}
+        {:error, "[Image] HTTP #{status}"}
 
       {:error, reason} ->
-        {:error, reason}
+        {:error, "[Image] #{inspect(reason)}"}
     end
   end
 

@@ -23,12 +23,12 @@ config :user_svc,
       "http://127.0.0.1:#{System.get_env("CLIENT_SVC_PORT", "8085")}"
     ),
   job_svc_endpoints: %{
-    convert_image: "/job_svc/ConvertImage",
-    enqueue_email: "/job_svc/EnqueueEmail"
+    convert_image: "/job_svc/convert_image/v1",
+    enqueue_email: "/job_svc/enqueue_email/v1"
   },
   client_svc_endpoints: %{
-    pdf_ready: "/client_svc/pdf_ready",
-    receive_notification: "/client_svc/receive_email_notification"
+    pdf_ready: "/client_svc/pdf_ready/v1",
+    receive_notification: "/client_svc/receive_email_notification/v1"
   },
   user_svc_endpoints: %{
     image_loader: "/user_svc/image_loader/v1"
@@ -51,7 +51,7 @@ config :ex_aws, :s3,
 
 # OpenTelemetry Configuration
 config :opentelemetry,
-  service_name: System.get_env("OTEL_SERVICE_NAME", "user_svc"),
+  service_name: "user_svc",
   traces_exporter: :otlp
 
 # Determine OTLP protocol from environment variable
@@ -69,9 +69,15 @@ otlp_protocol =
       :http_protobuf
   end
 
+otlp_endpoint =
+  case System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT") do
+    nil -> "http://127.0.0.1:4318"
+    endpoint -> endpoint
+  end
+
 config :opentelemetry_exporter,
   otlp_protocol: otlp_protocol,
-  otlp_endpoint: System.get_env("OTEL_EXPORTER_OTLP_ENDPOINT", "http://127.0.0.1:4318")
+  otlp_endpoint: otlp_endpoint
 
 # Logger Configuration
 log_level = System.get_env("LOG_LEVEL", "info") |> String.to_atom()

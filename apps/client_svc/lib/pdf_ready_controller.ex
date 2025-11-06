@@ -26,19 +26,60 @@ defmodule PdfReadyController do
     - message: Acknowledgment message
   """
   def receive(conn) do
-    {:ok, binary_body, conn} = read_body(conn)
+    with {:ok, binary_body, conn} <-
+           read_body(conn),
+         {:ok,
+          %Mcsv.PdfReadyNotification{
+            user_email: user_email,
+            presigned_url: presigned_url,
+            size: size,
+            message: message
+          }} <-
+           maybe_decode_request(binary_body) do
+      handle_notification(conn, user_email, presigned_url, size, message)
+    else
+      {:error, :decode_error} ->
+        Logger.error("[PdfReady][PdfReadyController] Failed to decode PdfReadyNotification")
 
-    %Mcsv.PdfReadyNotification{
-      user_email: user_email,
-      presigned_url: presigned_url,
-      size: size,
-      message: message
-    } = Mcsv.PdfReadyNotification.decode(binary_body)
+        send_resp(conn, 422, "[PdfReady][PdfReadyController] Unprocessable Entity")
+    end
+  end
 
-    Logger.info("User:  #{user_email}, #{message}")
-    Logger.info("📄 VIEW YOUR PDF: #{presigned_url}")
+  # %Mcsv.PdfReadyNotification{
+  #   user_email: user_email,
+  #   presigned_url: presigned_url,
+  #   size: size,
+  #   message: message
+  # } = Mcsv.PdfReadyNotification.decode(binary_body)
+
+  defp handle_notification(conn, user_email, presigned_url, size, message) do
+    Logger.info("User: #{user_email}, #{message}, you can view your PDF @ \n#{presigned_url}")
 
     send_resp(conn, 204, "")
+  end
+
+  @doc """
+  Attempts to decode the binary body into an EmailRequest protobuf.
+  ## Parameters
+    - binary_body: The raw binary body from the HTTP request.
+  ## Returns
+    - {:ok, %Mcsv.PdfReadyNotification{}} on success
+    - {:error, :decode_error} on failure
+
+      iex> DeliveryController.maybe_decode_email_request(1)
+      {:error, :decode_error}
+  r
+  """
+
+  def maybe_decode_request(binary_body) do
+    try do
+      %Mcsv.PdfReadyNotification{} = resp = Mcsv.PdfReadyNotification.decode(binary_body)
+      {:ok, resp}
+    catch
+      :error, reason ->
+        Logger.error("[PdfReady][PdfReadyController] Protobuf decode error: #{inspect(reason)}")
+        {:error, :decode_error}
+    end
   end
 
   defp format_bytes(bytes) when bytes < 1024, do: "#{bytes} B"

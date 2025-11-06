@@ -15,10 +15,10 @@ defmodule ConvertImageController do
   alias Clients.JobSvcClient
 
   # Runtime config - reads from runtime.exs via environment variables
-  defp user_svc_base_url, do: Application.get_env(:user_svc, :user_svc_base_url) |> dbg()
+  defp user_svc_base_url, do: Application.get_env(:user_svc, :user_svc_base_url)
 
   defp user_svc_image_loader,
-    do: Application.get_env(:user_svc, :user_svc_endpoints)[:image_loader] |> dbg()
+    do: Application.get_env(:user_svc, :user_svc_endpoints)[:image_loader]
 
   def convert(conn) do
     with {:ok, %Mcsv.ImageConversionRequest{} = request, new_conn} <-
@@ -33,10 +33,12 @@ defmodule ConvertImageController do
       |> send_resp(200, bin_message)
     else
       {:error, reason} ->
-        Logger.error("[ConvertImageController] Failed: #{inspect(reason)}")
+        Logger.error("[User][ConvertImageController] Failed: #{inspect(reason)}")
 
         response_binary =
-          ProtobufHelpers.build_user_failure("Failed to process request: #{inspect(reason)}")
+          ProtobufHelpers.build_user_failure(
+            "[User] Failed to process request: #{inspect(reason)}"
+          )
 
         # respond back to Client
         conn
@@ -62,7 +64,7 @@ defmodule ConvertImageController do
 
     case ImageStorage.store(request.image_data, request.user_id, format) do
       {:ok, storage_id} ->
-        Logger.info("[ConvertImageController] Stored image as #{storage_id}")
+        Logger.info("[User][ConvertImageController] Stored image as #{storage_id}")
         {:ok, storage_id}
 
       {:error, reason} ->
@@ -78,7 +80,7 @@ defmodule ConvertImageController do
     # Build image URL for other services to fetch
     image_url = build_presigned_url(storage_id)
 
-    Logger.info("[ConvertImageController] Image URL: #{image_url}")
+    Logger.info("[User][ConvertImageController] Image URL: #{image_url}")
 
     # Create request with image_url (no binary data)
     job_request = %Mcsv.ImageConversionRequest{

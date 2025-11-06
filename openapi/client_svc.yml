@@ -2,7 +2,7 @@ openapi: 3.1.0
 info:
   title: APIFiddle Sample Definition
   description: Example workspace
-  version: 0.0.0
+  version: 1.0.0
 
 servers:
   - url: http://localhost:8085/v1
@@ -21,12 +21,24 @@ paths:
       description: Receive email notification from User Service
       responses:
         "204":
-          description: The request was successful, but there is no content to return in
+          description:
+            The request was successful, but there is no content to return in
             the response.
           content:
             application/json:
               schema:
                 type: "null"
+        "422":
+          description: Bad Request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                required:
+                  - error
   /client_svc/pdf_ready/v1:
     post:
       operationId: notificationPdfIsReady
@@ -35,7 +47,8 @@ paths:
       summary: Notification PDF is ready
       responses:
         "204":
-          description: The request was successful, but there is no content to return in
+          description:
+            The request was successful, but there is no content to return in
             the response.
           content:
             application/json:
@@ -47,7 +60,8 @@ paths:
       summary: healthcheck
       responses:
         "200":
-          description: The request was successful, and the server has returned the
+          description:
+            The request was successful, and the server has returned the
             requested resource in the response body.
           content:
             application/json:

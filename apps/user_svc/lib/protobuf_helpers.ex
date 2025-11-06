@@ -11,7 +11,7 @@ defmodule ProtobufHelpers do
   def build_store_success(format, storage_id, presigned_url, size) do
     %Mcsv.StoreImageResponse{
       success: true,
-      message: "#{format} stored successfully",
+      message: "[User] #{format} stored successfully",
       storage_id: storage_id,
       presigned_url: presigned_url,
       size: size
@@ -25,7 +25,7 @@ defmodule ProtobufHelpers do
   def build_store_failure(reason) do
     %Mcsv.StoreImageResponse{
       success: false,
-      message: "Storage failed: #{inspect(reason)}",
+      message: "[User] Storage failed: #{inspect(reason)}",
       storage_id: "",
       presigned_url: "",
       size: 0

@@ -78,6 +78,7 @@ defmodule JobSvc.MixProject do
       # Database
       {:ecto_sql, "~> 3.12"},
       {:ecto_sqlite3, "~> 0.18"},
+      # Static code analysis
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]

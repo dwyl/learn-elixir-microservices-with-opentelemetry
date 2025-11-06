@@ -43,6 +43,9 @@ defmodule ImageSvc.MixProject do
       {:req, "~> 0.5.15"},
       {:protobuf, "~> 0.15.0"},
       {:jason, "~> 1.4"},
+      # Database
+      {:ecto_sql, "~> 3.12"},
+      {:ecto_sqlite3, "~> 0.18"},
 
       # OpenTelemetry for distributed tracing (exporter MUST be before opentelemetry)
       {:opentelemetry_api, "~> 1.5"},

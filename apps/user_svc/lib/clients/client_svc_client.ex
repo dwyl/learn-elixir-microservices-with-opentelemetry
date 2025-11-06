@@ -23,7 +23,7 @@ defmodule Clients.ClientSvcClient do
   - `size`: File size in bytes
   """
   def notify_pdf_ready(user_email, storage_id, presigned_url, size) do
-    Logger.info("[ClientSvcClient] Notifying client that PDF is ready for #{user_email}")
+    Logger.info("[User][ClientSvcClient] Notifying client that PDF is ready for #{user_email}")
 
     notification =
       %Mcsv.PdfReadyNotification{
@@ -31,7 +31,7 @@ defmodule Clients.ClientSvcClient do
         storage_id: storage_id,
         presigned_url: presigned_url,
         size: size,
-        message: "Your PDF is ready! Click the URL to view."
+        message: "[User] Your PDF is ready! Click the URL to view."
       }
       |> Mcsv.PdfReadyNotification.encode()
 
@@ -45,13 +45,13 @@ defmodule Clients.ClientSvcClient do
 
       case post(base_url(), endpoints().pdf_ready, notification) do
         {:ok, %{status: 204}} ->
-          Logger.info("[ClientSvcClient] Client notified successfully")
+          Logger.info("[User][ClientSvcClient] Client notified successfully")
 
         {:ok, %{status: status}} ->
-          Logger.warning("[ClientSvcClient] Client notification returned status #{status}")
+          Logger.warning("[User][ClientSvcClient] Client notification returned status #{status}")
 
         {:error, reason} ->
-          Logger.warning("[ClientSvcClient] Client notification failed: #{inspect(reason)}")
+          Logger.warning("[User][ClientSvcClient] Client notification failed: #{inspect(reason)}")
       end
     end)
 
@@ -68,20 +68,20 @@ defmodule Clients.ClientSvcClient do
   - `:ok` on success
   - `{:error, reason}` on failure
   """
-  def receive_notification(message) do
-    Logger.info("[ClientSvcClient] Forwarding email notification")
+  def push_notification(message) do
+    Logger.info("[User][ClientSvcClient] Forwarding email notification")
 
     case post(base_url(), endpoints().receive_notification, message) do
       {:ok, %{status: 204}} ->
-        Logger.info("[ClientSvcClient] Notification forwarded successfully")
+        Logger.info("[User][ClientSvcClient] Notification forwarded successfully")
         :ok
 
       {:ok, %{status: status}} ->
-        Logger.warning("[ClientSvcClient] Notification returned status #{status}")
-        {:error, "HTTP #{status}"}
+        Logger.warning("[User][ClientSvcClient] Notification returned status #{status}")
+        {:error, "[User] HTTP #{status}"}
 
       {:error, reason} ->
-        Logger.error("[ClientSvcClient] Notification failed: #{inspect(reason)}")
+        Logger.error("[User][ClientSvcClient] Notification failed: #{inspect(reason)}")
         {:error, reason}
     end
   end
@@ -99,7 +99,7 @@ defmodule Clients.ClientSvcClient do
            headers: [{"content-type", "application/protobuf"}],
            receive_timeout: receive_timeout
          ) do
-      {:ok, response} -> {:ok, response}
+      {:ok, %Req.Response{} = response} -> {:ok, response}
       {:error, reason} -> {:error, reason}
     end
   end

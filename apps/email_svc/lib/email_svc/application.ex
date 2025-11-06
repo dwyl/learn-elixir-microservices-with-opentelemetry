@@ -1,9 +1,7 @@
 defmodule EmailApp do
   use Application
 
-  @moduledoc """
-  Entry point
-  """
+  @moduledoc false
 
   require Logger
 
@@ -16,8 +14,6 @@ defmodule EmailApp do
       EmailSvc.PromEx,
       EmailSvc.Metrics,
       {Bandit, plug: EmailRouter, port: port}
-
-      # Start the Oban job processing system
     ]
 
     opts = [strategy: :one_for_one, name: EmailSvc.Supervisor]

@@ -1,21 +1,17 @@
 defmodule EmailRouter do
   use Plug.Router
+  @moduledoc false
 
   # Request ID for correlation across services (BEFORE :match)
   plug(Plug.RequestId)
-
   # Logger with request_id metadata (BEFORE :match)
   plug(Plug.Logger, log: :info)
-
   # PromEx metrics plug (must be before Plug.Telemetry to avoid metrics pollution)
   plug(PromEx.Plug, prom_ex_module: EmailSvc.PromEx)
-
   # Telemetry for metrics (BEFORE :match)
   plug(Plug.Telemetry, event_prefix: [:email_svc, :plug])
-
   # Extract OpenTelemetry trace context from incoming requests
   plug(EmailSvc.OpenTelemetryPlug)
-
   plug(:match)
 
   plug(Plug.Parsers,
@@ -27,10 +23,8 @@ defmodule EmailRouter do
 
   plug(:dispatch)
 
-  # RPC-style protobuf endpoints (matches services.proto)
-
   # EmailService.SendEmail - Send email via SMTP
-  post "/email_svc/SendEmail" do
+  post "/email_svc/send_email/v1" do
     DeliveryController.send(conn)
   end
 
@@ -40,13 +34,7 @@ defmodule EmailRouter do
     send_resp(conn, 200, "OK")
   end
 
-  get "/health/ready" do
-    # Readiness check - verify dependencies
-    # TODO: Check MinIO, user_svc connectivity
-    send_resp(conn, 200, "READY")
-  end
-
-  # Prometheus metrics endpoint
+  # Prometheus metrics endpoint. Replaced by PromEx plug.
   # get "/metrics" do
   #   metrics = TelemetryMetricsPrometheus.Core.scrape(:email_svc_metrics)
 

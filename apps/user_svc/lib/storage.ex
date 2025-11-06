@@ -60,7 +60,7 @@ defmodule Storage do
 
         {:error, reason} ->
           # Record error in span
-          Logger.error("[Storage] Failed to upload #{storage_id}: #{inspect(reason)}")
+          Logger.error("[User][Storage] Failed to upload #{storage_id}: #{inspect(reason)}")
           Tracer.set_status(OpenTelemetry.status(:error, "Upload failed: #{inspect(reason)}"))
           Tracer.add_event("storage.upload.failed", [{"error", inspect(reason)}])
           {:error, reason}
@@ -96,7 +96,7 @@ defmodule Storage do
           {:ok, body}
 
         {:error, reason} ->
-          Logger.error("[Storage] Failed to fetch #{storage_id}: #{inspect(reason)}")
+          Logger.error("[User][Storage] Failed to fetch #{storage_id}: #{inspect(reason)}")
           Tracer.set_status(OpenTelemetry.status(:error, "Fetch failed: #{inspect(reason)}"))
           Tracer.add_event("storage.fetch.failed", [{"error", inspect(reason)}])
           {:error, reason}
@@ -118,12 +118,13 @@ defmodule Storage do
       case ExAws.S3.delete_object(@bucket, storage_id)
            |> ExAws.request() do
         {:ok, _response} ->
+          Logger.info("[User][Storage] Successfully delete object")
           Tracer.add_event("storage.delete.success", [])
           Tracer.set_status(OpenTelemetry.status(:ok))
           :ok
 
         {:error, reason} ->
-          Logger.error("[Storage] Failed to delete #{storage_id}: #{inspect(reason)}")
+          Logger.error("[User][Storage] Failed to delete #{storage_id}: #{inspect(reason)}")
           Tracer.set_status(OpenTelemetry.status(:error, "Delete failed: #{inspect(reason)}"))
           Tracer.add_event("storage.delete.failed", [{"error", inspect(reason)}])
           {:error, reason}

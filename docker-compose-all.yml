@@ -70,7 +70,6 @@ services:
 
       # Docker-specific config (override .env for internal networking)
       USER_SVC_URL: "http://user_svc:${USER_SVC_PORT}"
-
       # Docker Loki logging driver (commented - using Promtail instead)
       # logging:
       #   driver: loki
@@ -263,11 +262,21 @@ services:
     environment:
       - COLLECTOR_OTLP_ENABLED=true
       - LOG_LEVEL=debug
+      # *** New OpenSearch Configuration ***
+      - SPAN_STORAGE_TYPE=elasticsearch # Use 'elasticsearch' type for OpenSearch
+      - ES_SERVER_URLS=http://opensearch:9200 # Use HTTPS and the service name 'opensearch'
+      # - ES_USERNAME=admin # Default user
+      # - ES_PASSWORD=${OPEN_SEARCH_PWD} # Matches the password set above
+      # Jaeger needs to ignore SSL cert warnings for local self-signed certs
+      - ES_TLS_SKIP_VERIFY=true
     healthcheck:
       test: [ "CMD", "wget", "--spider", "-q", "http://127.0.0.1:16686" ]
       interval: 30s
       timeout: 10s
       retries: 3
+    depends_on:
+      opensearch:
+        condition: service_healthy
 
   # Prometheus - Metrics collection and storage
   prometheus:
@@ -324,7 +333,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock:ro # Read Docker container logs
     command: -config.file=/etc/promtail/config.yml
     depends_on:
-      - loki
+      loki:
+        condition: service_healthy
     restart: unless-stopped
 
   # Grafana - Visualization for logs AND metrics
@@ -360,7 +370,7 @@ services:
     volumes:
       - ./openapi:/usr/share/nginx/html/specs:ro
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:80"]
+      test: [ "CMD", "wget", "--spider", "-q", "http://127.0.0.1:80" ]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -385,10 +395,37 @@ services:
     volumes:
       - ./openapi:/usr/share/nginx/html/specs:ro
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080"]
+      test: [ "CMD", "wget", "--spider", "-q", "http://127.0.0.1:8080" ]
       interval: 30s
       timeout: 10s
       retries: 3
+
+  # 1. OpenSearch Container (The Storage Backend)
+  opensearch:
+    image: opensearchproject/opensearch:latest # Use a specific version in production
+    container_name: msvc-opensearch
+    environment:
+      # **CRITICAL** for single-node development
+      - discovery.type=single-node
+      - DISABLE_SECURITY_PLUGIN=true
+      # **IMPORTANT**: OpenSearch 2.12+ requires a password for 'admin'
+      # - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD}
+
+      # Increase memory map count for OpenSearch to run (Linux hosts might need host-level config)
+      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
+    ports:
+      - "9200:9200" # REST API port
+    volumes:
+      # Persist data (optional but recommended)
+      - opensearch-data:/usr/share/opensearch/data
+    healthcheck:
+      # test: [ "CMD-SHELL", "curl -s -k -u admin:${OPEN_SEARCH_PWD} https://localhost:9200 || exit 1" ]
+      test: [ "CMD-SHELL", "curl -s  http://localhost:9200 || exit 1" ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Skip security for easier local setup if needed (not generally recommended)
+    # -e "DISABLE_SECURITY_PLUGIN=true"
 
 volumes:
   minio-data:
@@ -400,4 +437,6 @@ volumes:
   job-data:
     driver: local
   prometheus-data:
+    driver: local
+  opensearch-data:
     driver: local

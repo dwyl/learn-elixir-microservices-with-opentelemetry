@@ -32,17 +32,17 @@ defmodule JobRouter do
   # RPC-style protobuf endpoints (matches services.proto)
 
   # JobService.EnqueueEmail - Enqueue email job in Oban
-  post "/job_svc/EnqueueEmail" do
+  post "/job_svc/enqueue_email/v1" do
     EmailSenderController.enqueue(conn)
   end
 
   # JobService.NotifyEmailDelivery - Receive delivery status from email_svc
-  post "/job_svc/NotifyEmailDelivery" do
+  post "/job_svc/notify_email_delivery/v1" do
     EmailNotificationController.notify(conn)
   end
 
   # JobService.ConvertImage - Enqueue image conversion job
-  post "/job_svc/ConvertImage" do
+  post "/job_svc/convert_image/v1" do
     ImageController.convert(conn)
   end
 
@@ -52,11 +52,11 @@ defmodule JobRouter do
     send_resp(conn, 200, "OK")
   end
 
-  get "/health/ready" do
-    # Readiness check - verify dependencies
-    # TODO: Check MinIO, user_svc connectivity
-    send_resp(conn, 200, "READY")
-  end
+  # get "/health/ready" do
+  #   # Readiness check - verify dependencies
+  #   # TODO: Check MinIO, user_svc connectivity
+  #   send_resp(conn, 200, "READY")
+  # end
 
   # Debug endpoints
   get "/debug/db" do

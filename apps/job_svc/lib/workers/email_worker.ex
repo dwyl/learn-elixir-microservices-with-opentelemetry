@@ -21,7 +21,7 @@ defmodule JobService.Workers.EmailWorker do
 
   @spec perform(Oban.Job.t()) :: :ok | {:error, any()}
   def perform(%Oban.Job{args: args} = _job) do
-    Logger.info("[EmailWorker] Received job with args: #{inspect(args)}")
+    Logger.info("[Job][EmailWorker] Received job with args: #{inspect(args)}")
     do_perform(args)
   end
 
@@ -29,7 +29,7 @@ defmodule JobService.Workers.EmailWorker do
     # Extract and attach OpenTelemetry trace context from job args
     :ok = attach_trace_context(args)
 
-    Logger.info("[EmailWorker] Sending #{args["type"]} email to user #{args["id"]}")
+    Logger.info("[Job][EmailWorker] Sending #{args["type"]} email to user #{args["id"]}")
 
     EmailSvcClient.send_email(args)
   end
@@ -39,14 +39,14 @@ defmodule JobService.Workers.EmailWorker do
     :ok =
       attach_trace_context(args)
 
-    Logger.info("[EmailWorker] Sending notification email to user #{args["user_id"]}")
+    Logger.info("[Job][EmailWorker] Sending notification email to user #{args["user_id"]}")
 
     EmailSvcClient.send_email(args)
   end
 
   defp do_perform(args) do
-    Logger.error("[EmailWorker] Unknown email type: #{inspect(args)}")
-    {:error, "Unknown email type"}
+    Logger.error("[Job][EmailWorker] Unknown email type: #{inspect(args)}")
+    {:error, "[Job] Unknown email type"}
   end
 
   # Extract OpenTelemetry trace context from job args and attach to current process

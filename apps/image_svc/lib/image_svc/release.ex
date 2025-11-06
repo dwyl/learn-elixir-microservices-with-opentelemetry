@@ -1,8 +1,8 @@
-defmodule JobService.Release do
+defmodule ImageService.Release do
   @moduledoc """
   Used for executing DB release tasks when run in production without Mix installed.
   """
-  @app :job_svc
+  @app :image_svc
 
   require Logger
 

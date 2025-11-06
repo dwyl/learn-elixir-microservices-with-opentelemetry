@@ -5,14 +5,9 @@ defmodule Client do
   require Logger
   require OpenTelemetry.Tracer, as: Tracer
   require OpenTelemetry.Span, as: Span
-  # Code.require_file("priv/user.pb.ex") |> dbg()
-
-  # No need for Code.require_file!
-  # Mix automatically compiles all .ex files in lib/
-  # Just reference the module directly: Mcsv.UserRequest
 
   # Runtime config - reads from runtime.exs via environment variables
-  defp base_user_url, do: Application.get_env(:client_svc, :user_svc_base_url) |> dbg()
+  defp base_user_url, do: Application.get_env(:client_svc, :user_svc_base_url)
   defp user_endpoints, do: Application.get_env(:client_svc, :user_endpoints)
 
   @doc """
@@ -21,8 +16,13 @@ defmodule Client do
   ## Examples
 
       iex> Client.create(1)
-      %Mcsv.UserResponse{ok: true, message: "..."}
+      %Mcsv.UserResponse{
+        ok: true,
+        message: "[EmailSenderController]EMAIL_TYPE_NOTIFICATION email enqueued for  pbuser1@example.com",
+        __unknown_fields__: []
+      }
   """
+  @spec create(integer()) :: {:ok, Mcsv.UserResponse.t()} | {:error, any()}
   def create(i) do
     Tracer.with_span "#{__MODULE__}.create/1" do
       Tracer.set_attribute(:value, i)
@@ -33,15 +33,23 @@ defmodule Client do
       id: "#{i}",
       name: "PB User #{i}",
       email: "pbuser#{i}@example.com",
-      type: "welcome"
+      type: :EMAIL_TYPE_NOTIFICATION
     }
     |> post(base_user_url(), user_endpoints().create)
     |> case do
       {:ok, %Req.Response{} = resp} ->
-        Mcsv.UserResponse.decode(resp.body)
+        try do
+          Mcsv.UserResponse.decode(resp.body)
+        catch
+          :error,
+          %Protobuf.DecodeError{
+            message: msg
+          } ->
+            {:error, inspect(msg)}
+        end
 
       {:error, reason} ->
-        raise inspect(reason)
+        {:error, reason}
     end
   end
 
@@ -111,6 +119,8 @@ defmodule Client do
     end)
   end
 
+  @spec post(map(), binary(), binary()) ::
+          {:ok, Req.Response.t()} | {:error, any()}
   defp post(%Mcsv.UserRequest{} = user, base, uri) do
     binary = Mcsv.UserRequest.encode(user)
 

@@ -2,26 +2,62 @@ defmodule DeliveryController do
   import Plug.Conn
   require Logger
 
+  @moduledoc """
+  Controller for handling email delivery requests.
+  1. Receives EmailRequest protobuf via HTTP POST.
+  2. Decodes the protobuf to extract email details.
+  3. Sends the email using EmailService.Mailer.
+  4. Responds with EmailResponse protobuf indicating success or failure.
+  """
+
   def send(conn) do
-    {:ok, binary_body, new_conn} = Plug.Conn.read_body(conn)
+    with {:ok, binary_body, new_conn} <-
+           Plug.Conn.read_body(conn),
+         {:ok,
+          %Mcsv.EmailRequest{
+            user_name: name,
+            user_email: email,
+            email_type: type
+          }} <-
+           maybe_decode_email_request(binary_body) do
+      case type do
+        "welcome" ->
+          deliver_and_confirm(new_conn, "welcome", email, name)
 
-    # Decode protobuf and pattern match!
+        "notification" ->
+          deliver_and_confirm(new_conn, "notification", email, name)
 
-    %Mcsv.EmailRequest{
-      user_name: name,
-      user_email: email,
-      email_type: type
-    } = Mcsv.EmailRequest.decode(binary_body)
+        _ ->
+          Logger.error("[Email][DeliveryController] Failed request: unknow mail type")
+          send_resp(new_conn, 400, "[Email][DeliveryController] Unknown email type")
+      end
+    else
+      {:error, :decode_error} ->
+        send_resp(conn, 422, "[Email][DeliveryController] Bad Request")
+    end
+  end
 
-    case type do
-      "welcome" ->
-        deliver_and_confirm(new_conn, "welcome", email, name)
+  @doc """
+  Attempts to decode the binary body into an EmailRequest protobuf.
+  ## Parameters
+    - binary_body: The raw binary body from the HTTP request.
+  ## Returns
+    - {:ok, %Mcsv.EmailRequest{}} on success
+    - {:error, :decode_error} on failure
 
-      "notification" ->
-        deliver_and_confirm(new_conn, "notification", email, name)
+      iex> DeliveryController.maybe_decode_email_request(1)
+      {:error, :decode_error}
 
-      _ ->
-        new_conn |> send_resp(400, "Unknown email type")
+  """
+
+  def maybe_decode_email_request(binary_body) do
+    try do
+      %Mcsv.EmailRequest{} = resp = Mcsv.EmailRequest.decode(binary_body)
+      {:ok, resp}
+    catch
+      :error, reason ->
+        Logger.error("[Email][DeliveryController] Protobuf decode error: #{inspect(reason)}")
+        {:error, :decode_error}
     end
   end
 
@@ -41,17 +77,12 @@ defmodule DeliveryController do
         |> EmailService.Mailer.deliver()
     end
 
-    %Mcsv.EmailResponse{
-      success: true,
-      message: "Email sent to #{email}"
-    }
-
-    Logger.info("[DeliveryController]: Sent email to #{email}")
+    Logger.info("[Email][DeliveryController]: New email sent to #{email}")
 
     response_binary =
       %Mcsv.EmailResponse{
         success: true,
-        message: "[DeliveryController] New email sent to #{email}"
+        message: "[Email][DeliveryController] New email sent to #{email}"
       }
       |> Mcsv.EmailResponse.encode()
 

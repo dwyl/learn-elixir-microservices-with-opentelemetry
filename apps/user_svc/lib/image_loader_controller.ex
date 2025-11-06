@@ -29,7 +29,7 @@ defmodule ImageLoaderController do
 
         conn
         |> put_resp_content_type("application/json")
-        |> send_resp(404, Jason.encode!(%{error: "Image not found"}))
+        |> send_resp(404, Jason.encode!(%{error: "[User] Image not found"}))
     end
   end
 
