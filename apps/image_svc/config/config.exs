@@ -19,24 +19,10 @@ config :image_svc, ImageSvc.PromEx,
   grafana: :disabled,
   metrics_server: :disabled
 
-# Logger configuration - uses Docker Loki driver for log shipping
-config :logger,
-  level: :info
-
 # Add service name to all logs
 config :logger, :default_formatter, metadata: [:service]
 
-# File handler for Loki/Promtail - COMMENTED OUT (using Docker Loki driver instead)
-# config :logger, :file_handler,
-#   level: :info,
-#   path: "../../logs/image_svc.log",
-#   formatter:
-#     {LoggerJSON.Formatters.Basic,
-#      metadata: [
-#        :request_id,
-#        :service,
-#        :trace_id,
-#        :span_id,
-#        :user_id,
-#        :duration
-#      ]}
+# OpenTelemetry Configuration
+config :opentelemetry,
+  service_name: "image_svc",
+  traces_exporter: :otlp

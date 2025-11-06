@@ -16,11 +16,6 @@ config :client_svc,
     convert_image: "/user_svc/convert_image/v1"
   }
 
-# OpenTelemetry Configuration
-config :opentelemetry,
-  service_name: "client_svc",
-  traces_exporter: :otlp
-
 # Determine OTLP protocol from environment variable
 # Options: "http" (default) or "grpc" (production)
 otlp_protocol =

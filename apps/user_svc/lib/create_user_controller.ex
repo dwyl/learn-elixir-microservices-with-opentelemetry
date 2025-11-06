@@ -21,8 +21,8 @@ defmodule CreateUserController do
       |> send_resp(200, resp_binary)
     else
       {:error, reason} ->
-        conn
-        |> send_resp(500, reason)
+        Logger.error(reason)
+        resp(conn, 500, "")
     end
   end
 end

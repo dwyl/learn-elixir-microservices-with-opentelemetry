@@ -23,7 +23,7 @@ defmodule ForwardEmailNotificationController do
         Logger.error("[User][ForwardEmailNotificationController] Failed: #{inspect(reason)}")
 
         conn
-        |> send_resp(204, "")
+        |> send_resp(422, "[User][ForwardEmailNotificationController] Failed: #{inspect(reason)}")
     end
   end
 
@@ -41,15 +41,7 @@ defmodule ForwardEmailNotificationController do
   end
 
   defp maybe_forward_to_client(response) do
-    if response.success do
-      Logger.info("[User][ForwardEmailNotificationController] Forwarding success to client_svc")
-      ClientSvcClient.push_notification(response.message)
-    else
-      Logger.warning(
-        "[User][ForwardEmailNotificationController] Email delivery failed: #{response.message}"
-      )
-
-      :ok
-    end
+    Logger.info("[User][ForwardEmailNotificationController] Forwarding response to client_svc")
+    ClientSvcClient.push_notification(response.message)
   end
 end

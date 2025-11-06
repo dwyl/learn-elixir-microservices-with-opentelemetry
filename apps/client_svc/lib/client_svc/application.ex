@@ -10,6 +10,8 @@ defmodule ClientApp do
   def start(_type, _args) do
     port = Application.get_env(:client_svc, :port, 8085)
     Logger.info("Starting CLIENT Server on port #{port}")
+    OpentelemetryBandit.setup()
+    OpentelemetryPhoenix.setup(adapter: :bandit)
 
     children = [
       # PromEx metrics

@@ -29,29 +29,17 @@ defmodule ClientRouter do
 
   plug(:dispatch)
 
-  # RPC-style protobuf endpoints (matches services.proto)
-
-  # ClientService.ReceiveNotification - Receive final workflow callback
   post "/client_svc/receive_email_notification/v1" do
     EmailNotificationController.receive(conn)
   end
 
-  # ClientService.PdfReady - Receive PDF conversion completion notification
   post "/client_svc/pdf_ready/v1" do
     PdfReadyController.receive(conn)
   end
 
-  # Health check endpoints
   match "/health", via: [:get, :head] do
-    # Simple liveness check
     send_resp(conn, 200, "OK")
   end
-
-  # get "/health/ready" do
-  #   # Readiness check - verify dependencies
-  #   # TODO: Check MinIO, user_svc connectivity
-  #   send_resp(conn, 200, "READY")
-  # end
 
   # Prometheus metrics endpoint (now handled by PromEx.Plug)
   # get "/metrics" do

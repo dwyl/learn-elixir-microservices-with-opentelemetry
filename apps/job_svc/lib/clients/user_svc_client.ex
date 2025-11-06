@@ -43,9 +43,9 @@ defmodule Clients.UserSvcClient do
         Logger.info("[Job][UserSvcClient] Notification sent successfully")
         {:ok, :notified}
 
-      {:ok, %Req.Response{status: status, body: body}} ->
-        Logger.error("[Job][UserSvcClient] Unexpected status #{status}: #{inspect(body)}")
-        {:error, "[Job] HTTP #{status}"}
+      {:ok, %Req.Response{status: status, body: body} = resp} ->
+        Logger.error("[Job][UserSvcClient] Status #{status}: #{body}")
+        {:error, "[Job] HTTP error: #{status}"}
 
       {:error, reason} ->
         Logger.error("[Job][UserSvcClient] Request failed: #{inspect(reason)}")

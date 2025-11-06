@@ -41,10 +41,13 @@ defmodule ClientSvc.MixProject do
       {:bandit, "~> 1.8"},
       {:plug, "~> 1.18"},
       {:req, "~> 0.5.15"},
+      {:phoenix, "~> 1.8"},
       # serializer
       {:jason, "~> 1.4"},
       {:protobuf, "~> 0.15.0"},
       # {:telemetry, "~> 1.3"},
+      {:opentelemetry_phoenix, "~> 2.0"},
+      {:opentelemetry_bandit, "~> 0.3.0"},
       {:opentelemetry_exporter, "~> 1.10"},
       {:opentelemetry, "~> 1.7"},
       {:opentelemetry_api, "~> 1.5"},
