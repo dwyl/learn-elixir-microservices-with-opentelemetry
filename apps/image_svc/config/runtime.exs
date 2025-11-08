@@ -1,9 +1,26 @@
 import Config
 
-# Runtime configuration for image_svc
-
-# HTTP Port
 port = System.get_env("IMAGE_SVC_PORT", "8084") |> String.to_integer()
+
+config :image_svc, ImageSvcWeb.Endpoint,
+  adapter: Bandit.PhoenixAdapter,
+  url: [host: "localhost"],
+  http: [
+    ip: {127, 0, 0, 1},
+    port: port
+  ],
+  server: true,
+  code_reloader: false,
+  check_origin: false,
+  secret_key_base: "lSELLkV2qXzO3PbrZjubtnS84cvDgItzZ3cuQMlmRrM/f5Iy0YHJgn/900qLm7/a"
+
+# Database configuration (SQLite)------------------------
+# In Docker: /app/db/service.db
+# In dev: db/service.db
+
+config :image_svc, ImageService.Repo,
+  database: System.get_env("DATABASE_PATH", "db/service.db"),
+  pool_size: String.to_integer(System.get_env("DB_POOL_SIZE", "5"))
 
 config :image_svc,
   port: port,
@@ -13,17 +30,21 @@ config :image_svc,
     store_image: "/user_svc/store_image/v1",
     notify_user: "/user_svc/notify_user/v1",
     image_loader: "/user_svc/image_loader/v1"
-  }
+  },
+  image_bucket: System.get_env("IMAGE_BUCKET", "msvc-images")
 
-# Database configuration (SQLite)------------------------
-# In Docker: /app/db/service.db
-# In dev: db/service.db
+# MinIO / S3 Configuration
+config :ex_aws,
+  access_key_id: System.get_env("MINIO_ROOT_USER", "minioadmin"),
+  secret_access_key: System.get_env("MINIO_ROOT_PASSWORD", "minioadmin"),
+  region: System.get_env("AWS_REGION", "us-east-1"),
+  json_codec: Jason
 
-config :image_svc, ImageService.Repo,
-  database: System.get_env("DATABASE_PATH", "db/service.db"),
-  pool_size: String.to_integer(System.get_env("DB_POOL_SIZE", "5")),
-  stacktrace: true,
-  show_sensitive_data_on_connection_error: true
+config :ex_aws, :s3,
+  scheme: System.get_env("MINIO_SCHEME", "http://"),
+  host: System.get_env("MINIO_HOST", "127.0.0.1"),
+  port: System.get_env("MINIO_PORT", "9000") |> String.to_integer(),
+  region: System.get_env("AWS_REGION", "us-east-1")
 
 # Determine OTLP protocol from environment variable------------------------
 # Options: "http" (default) or "grpc" (production)

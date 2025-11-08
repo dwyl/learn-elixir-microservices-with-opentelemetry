@@ -25,6 +25,7 @@ services:
       # Service-specific overrides
       PORT: "${USER_SVC_PORT}"
       OTEL_SERVICE_NAME: "user_svc"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"  # Send to Jaeger for better UI
 
       # Docker-specific config (override .env for internal networking)
       MINIO_HOST: "minio"
@@ -35,6 +36,7 @@ services:
     depends_on:
       - minio
       - jaeger
+      - tempo
     healthcheck:
       test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:${USER_SVC_PORT}/health" ]
       interval: 30s
@@ -67,6 +69,7 @@ services:
       # Service-specific overrides
       PORT: ${CLIENT_SVC_PORT}
       OTEL_SERVICE_NAME: "client_svc"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"  # Send to Jaeger for better UI
 
       # Docker-specific config (override .env for internal networking)
       USER_SVC_URL: "http://user_svc:${USER_SVC_PORT}"
@@ -83,6 +86,7 @@ services:
     depends_on:
       - user_svc
       - jaeger
+      - tempo
       - loki
     healthcheck:
       test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:${CLIENT_SVC_PORT}/health" ]
@@ -116,6 +120,7 @@ services:
       # Service-specific overrides
       PORT: ${JOB_SVC_PORT}
       OTEL_SERVICE_NAME: "job_svc"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"  # Send to Jaeger for better UI
       DATABASE_PATH: "/app/db/job_service.db"
 
       # Docker-specific config (override .env for internal networking)
@@ -132,6 +137,7 @@ services:
     depends_on:
       - minio
       - jaeger
+      - tempo
     healthcheck:
       test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:${JOB_SVC_PORT}/health" ]
       interval: 30s
@@ -164,6 +170,7 @@ services:
       # Service-specific overrides
       PORT: ${IMAGE_SVC_PORT}
       OTEL_SERVICE_NAME: "image_svc"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"  # Send to Jaeger for better UI
 
       # Docker-specific config (override .env for internal networking)
       MINIO_HOST: "minio"
@@ -173,6 +180,7 @@ services:
     depends_on:
       - minio
       - jaeger
+      - tempo
     healthcheck:
       test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:${IMAGE_SVC_PORT}/health" ]
 
@@ -206,10 +214,12 @@ services:
       # Service-specific overrides
       PORT: ${EMAIL_SVC_PORT}
       OTEL_SERVICE_NAME: "email_svc"
+      OTEL_EXPORTER_OTLP_ENDPOINT: "http://jaeger:4317"  # Send to Jaeger for better UI
       MAILER_ADAPTER: "local"
 
     depends_on:
       - jaeger
+      - tempo
     healthcheck:
       test: [ "CMD", "wget", "-q", "--spider", "http://127.0.0.1:${EMAIL_SVC_PORT}/health" ]
       interval: 30s
@@ -243,40 +253,47 @@ services:
       minio:
         condition: service_healthy
     entrypoint: >
-      /bin/sh -c " mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}; mc mb --ignore-existing local/msvc-images; mc mb --ignore-existing local/loki-chunks; echo 'MinIO buckets initialized successfully'; "
+      /bin/sh -c " mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}; mc mb --ignore-existing local/msvc-images; mc mb --ignore-existing local/loki-chunks; mc mb --ignore-existing local/tempo-traces; echo 'MinIO buckets initialized successfully (msvc-images, loki-chunks, tempo-traces)'; "
 
-  # zipkin:
-  #   image: openzipkin/zipkin-slim
-  #   container_name: msvc-zipkin
-  #   environment:
-  #     - STORAGE_TYPE=mem
-  #   ports:
-  #     - '9411:9411'
-  jaeger:
-    image: jaegertracing/jaeger:latest
-    container_name: msvc-jaeger
+  tempo:
+    image: grafana/tempo:latest
+    container_name: msvc-tempo
     ports:
-      - ${JAEGER_UI_PORT}:16686 # Jaeger UI
-      - ${JAEGER_OTLP_HTTP_PORT}:4318 # OTLP HTTP receiver (for OpenTelemetry)
-      - ${JAEGER_OTLP_GRPC_PORT}:4317 # OTLP gRPC receiver (alternative)
+      - ${TEMPO_UI_PORT:-3200}:3200 # Tempo Query UI (optional)
+      - ${TEMPO_OTLP_GRPC_PORT:-4317}:4317 # OTLP gRPC receiver (RECOMMENDED for production)
+      - ${TEMPO_OTLP_HTTP_PORT:-4318}:4318 # OTLP HTTP receiver (fallback)
+    command: -config.file=/etc/tempo/tempo.yml
+    volumes:
+      - ./tempo/tempo.yml:/etc/tempo/tempo.yml
+    tmpfs:
+      - /tmp/tempo:mode=1777,size=1G # Temporary storage for WAL and cache (writable by all users)
     environment:
-      - COLLECTOR_OTLP_ENABLED=true
-      - LOG_LEVEL=debug
-      # *** New OpenSearch Configuration ***
-      - SPAN_STORAGE_TYPE=elasticsearch # Use 'elasticsearch' type for OpenSearch
-      - ES_SERVER_URLS=http://opensearch:9200 # Use HTTPS and the service name 'opensearch'
-      # - ES_USERNAME=admin # Default user
-      # - ES_PASSWORD=${OPEN_SEARCH_PWD} # Matches the password set above
-      # Jaeger needs to ignore SSL cert warnings for local self-signed certs
-      - ES_TLS_SKIP_VERIFY=true
+      - LOG_LEVEL=info
+    depends_on:
+      - minio-init # Wait for MinIO buckets
     healthcheck:
-      test: [ "CMD", "wget", "--spider", "-q", "http://127.0.0.1:16686" ]
+      test: [ "CMD", "wget", "--spider", "-q", "http://127.0.0.1:3200/ready" ]
       interval: 30s
       timeout: 10s
       retries: 3
-    depends_on:
-      opensearch:
-        condition: service_healthy
+
+  # Jaeger - Distributed tracing UI (better UX than Tempo, shares OTLP traces)
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: msvc-jaeger
+    ports:
+      - ${JAEGER_UI_PORT:-16686}:16686 # Jaeger UI
+      - ${JAEGER_OTLP_GRPC_PORT:-4327}:4317 # OTLP gRPC receiver (different host port to avoid conflict with Tempo)
+      - ${JAEGER_OTLP_HTTP_PORT:-4328}:4318 # OTLP HTTP receiver
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - SPAN_STORAGE_TYPE=memory # In-memory storage (for dev)
+      - LOG_LEVEL=info
+    healthcheck:
+      test: [ "CMD", "wget", "--spider", "-q", "http://127.0.0.1:16686/" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   # Prometheus - Metrics collection and storage
   prometheus:
@@ -351,7 +368,7 @@ services:
       - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - loki
-      - jaeger
+      - tempo
       - prometheus
     healthcheck:
       test: [ "CMD", "wget", "--spider", "-q", "http://127.0.0.1:3000/api/health" ]
@@ -399,33 +416,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-
-  # 1. OpenSearch Container (The Storage Backend)
-  opensearch:
-    image: opensearchproject/opensearch:latest # Use a specific version in production
-    container_name: msvc-opensearch
-    environment:
-      # **CRITICAL** for single-node development
-      - discovery.type=single-node
-      - DISABLE_SECURITY_PLUGIN=true
-      # **IMPORTANT**: OpenSearch 2.12+ requires a password for 'admin'
-      # - OPENSEARCH_INITIAL_ADMIN_PASSWORD=${OPENSEARCH_INITIAL_ADMIN_PASSWORD}
-
-      # Increase memory map count for OpenSearch to run (Linux hosts might need host-level config)
-      - "OPENSEARCH_JAVA_OPTS=-Xms512m -Xmx512m"
-    ports:
-      - "9200:9200" # REST API port
-    volumes:
-      # Persist data (optional but recommended)
-      - opensearch-data:/usr/share/opensearch/data
-    healthcheck:
-      # test: [ "CMD-SHELL", "curl -s -k -u admin:${OPEN_SEARCH_PWD} https://localhost:9200 || exit 1" ]
-      test: [ "CMD-SHELL", "curl -s  http://localhost:9200 || exit 1" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    # Skip security for easier local setup if needed (not generally recommended)
-    # -e "DISABLE_SECURITY_PLUGIN=true"
+  # OpenSearch removed - Tempo uses MinIO for storage instead
 
 volumes:
   minio-data:
@@ -437,6 +428,4 @@ volumes:
   job-data:
     driver: local
   prometheus-data:
-    driver: local
-  opensearch-data:
     driver: local

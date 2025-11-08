@@ -57,7 +57,6 @@ defmodule Clients.JobSvcClient do
   def enqueue_email(user_request_binary) do
     case post(job_base_url(), job_endpoints().enqueue_email, user_request_binary) do
       {:ok, %{status: 200, body: response_binary}} ->
-        # {:ok, Mcsv.UserResponse.decode(response_binary) |> dbg()}
         {:ok, response_binary}
 
       {:ok, %{status: status, body: body}} ->

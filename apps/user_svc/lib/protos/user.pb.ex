@@ -72,3 +72,12 @@ defmodule Mcsv.PdfReadyResponse do
   field :ok, 1, type: :bool
   field :message, 2, type: :string
 end
+
+defmodule Mcsv.NotifyImageConvertedResponse do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  field :ok, 1, type: :bool
+  field :message, 2, type: :string
+end

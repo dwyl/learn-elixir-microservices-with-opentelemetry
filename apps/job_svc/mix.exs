@@ -12,16 +12,20 @@ defmodule JobSvc.MixProject do
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      releases: [
-        job_svc: [
-          applications: [
-            opentelemetry_exporter: :permanent,
-            opentelemetry: :temporary,
-            job_svc: :permanent
-          ],
-          include_executables_for: [:unix],
-          strip_beams: false
-        ]
+      releases: releases()
+    ]
+  end
+
+  defp releases do
+    [
+      job_svc: [
+        applications: [
+          job_svc: :permanent,
+          opentelemetry_exporter: :permanent,
+          opentelemetry: :temporary
+        ],
+        include_executables_for: [:unix],
+        strip_beams: false
       ]
     ]
   end
@@ -35,13 +39,14 @@ defmodule JobSvc.MixProject do
         # :inets,
         :tls_certificate_check
       ],
-      mod: {JobApp, []}
+      mod: {JobService.Application, []}
     ]
   end
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:phoenix, "~> 1.8"},
       {:bandit, "~> 1.8"},
       {:req, "~> 0.5.15"},
       {:jason, "~> 1.4"},
@@ -55,6 +60,8 @@ defmodule JobSvc.MixProject do
       # {:opentelemetry_oban, "~> 1.1"},
       {:opentelemetry_ecto, "~> 1.2"},
       {:opentelemetry, "~> 1.7"},
+      {:opentelemetry_phoenix, "~> 2.0"},
+      {:opentelemetry_bandit, "~> 0.3.0"},
       {:opentelemetry_req, "~> 1.0"},
       {:tls_certificate_check, "~> 1.29"},
 

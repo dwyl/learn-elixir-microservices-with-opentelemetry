@@ -1,14 +1,20 @@
 import Config
 
-# Runtime configuration - loaded when the release starts
-# This file is executed when the application starts, allowing
-# environment variables to be read at runtime.
-
-# Get environment with fallback to "dev"
-env = System.get_env("MIX_ENV", "dev")
+# env = System.get_env("MIX_ENV", "dev")
 
 # HTTP Port
 port = System.get_env("USER_SVC_PORT", "8081") |> String.to_integer()
+
+config :user_svc, UserSvcWeb.Endpoint,
+  url: [host: "localhost"],
+  adapter: Bandit.PhoenixAdapter,
+  http: [
+    ip: {127, 0, 0, 1},
+    port: port
+  ],
+  server: true,
+  check_origin: false,
+  secret_key_base: "lSELLkV2qXzO3PbrZjubtnS84cvDgItzZ3cuQMlmRrM/f5Iy0YHJgn/900qLm7/a"
 
 config :user_svc,
   port: port,
@@ -49,11 +55,6 @@ config :ex_aws, :s3,
   port: System.get_env("MINIO_PORT", "9000") |> String.to_integer(),
   region: System.get_env("AWS_REGION", "us-east-1")
 
-# OpenTelemetry Configuration
-config :opentelemetry,
-  service_name: "user_svc",
-  traces_exporter: :otlp
-
 # Determine OTLP protocol from environment variable
 # Options: "http" (default) or "grpc" (production)
 otlp_protocol =
@@ -80,10 +81,8 @@ config :opentelemetry_exporter,
   otlp_endpoint: otlp_endpoint
 
 # Logger Configuration
-log_level = System.get_env("LOG_LEVEL", "info") |> String.to_atom()
-
 config :logger,
-  level: log_level
+  level: System.get_env("LOG_LEVEL", "info") |> String.to_atom()
 
 # Optionally configure JSON logging
 if System.get_env("LOG_FORMAT") == "json" do

@@ -1,29 +1,32 @@
-defmodule JobApp do
+defmodule JobService.Application do
   use Application
-  @moduledoc false
+
+  @moduledoc """
+  Responsible for managing background job processing tasks.
+  Uses Oban for job queue management and processing.
+  """
 
   require Logger
 
   @impl true
   def start(_type, _args) do
     JobService.Release.migrate()
-    port = Application.get_env(:job_svc, :port, 8082)
 
     # Enable OpenTelemetry instrumentation for Ecto
     OpentelemetryEcto.setup([:job_svc, :ecto_repos])
 
     # OpentelemetryOban.setup(trace: [:jobs])  # Disabled: dependency conflict with opentelemetry_req
 
+    # PromEx must start before Repo to capture Ecto init events
     children = [
-      # PromEx must start before Repo to capture Ecto init events
-      JobSvc.PromEx,
+      JobServiceWeb.Telemetry,
+      JobService.PromEx,
       JobService.Repo,
-      JobService.Metrics,
-      {Bandit, plug: JobRouter, port: port},
-      {Oban, Application.fetch_env!(:job_svc, Oban)}
+      {Oban, Application.fetch_env!(:job_svc, Oban)},
+      JobServiceWeb.Endpoint
     ]
 
-    opts = [strategy: :one_for_one, name: JobSvc.Supervisor]
+    opts = [strategy: :one_for_one, name: JobService.Supervisor]
     Supervisor.start_link(children, opts)
   end
 end

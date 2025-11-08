@@ -5,13 +5,19 @@ import Config
 # HTTP Port
 port = System.get_env("EMAIL_SVC_PORT", "8083") |> String.to_integer()
 
+config :email_svc, EmailServiceWeb.Endpoint,
+  url: [host: "localhost"],
+  adapter: Bandit.PhoenixAdapter,
+  http: [
+    ip: {127, 0, 0, 1},
+    port: port
+  ],
+  server: true,
+  check_origin: false,
+  secret_key_base: "lSELLkV2qXzO3PbrZjubtnS84cvDgItzZ3cuQMlmRrM/f5Iy0YHJgn/900qLm7/a"
+
 config :email_svc,
   port: port
-
-# OpenTelemetry Configuration
-config :opentelemetry,
-  service_name: "email_svc",
-  traces_exporter: :otlp
 
 # Determine OTLP protocol from environment variable
 # Options: "http" (default) or "grpc" (production)

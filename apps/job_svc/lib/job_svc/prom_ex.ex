@@ -1,4 +1,4 @@
-defmodule JobSvc.PromEx do
+defmodule JobService.PromEx do
   @moduledoc """
   Be sure to add the following to finish setting up PromEx:
 
@@ -62,6 +62,7 @@ defmodule JobSvc.PromEx do
       # PromEx built in plugins
       Plugins.Application,
       Plugins.Beam,
+      {Plugins.Phoenix, router: JobSvcWeb.Router, endpoint: JobSvcWeb.Endpoint},
       {Plugins.Ecto, oban_repos: [JobService.Repo]},
       Plugins.Oban
 
@@ -84,6 +85,7 @@ defmodule JobSvc.PromEx do
       # PromEx built in Grafana dashboards
       {:prom_ex, "application.json"},
       {:prom_ex, "beam.json"},
+      {:prom_ex, "phoenix.json"},
       {:prom_ex, "ecto.json"},
       {:prom_ex, "oban.json"}
 

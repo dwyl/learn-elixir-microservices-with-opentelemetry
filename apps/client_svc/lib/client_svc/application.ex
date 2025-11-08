@@ -1,26 +1,19 @@
-defmodule ClientApp do
+defmodule ClientService.Application do
   use Application
 
-  @moduledoc """
-  Entry point
-  """
+  @moduledoc false
 
   require Logger
 
   def start(_type, _args) do
-    port = Application.get_env(:client_svc, :port, 8085)
-    Logger.info("Starting CLIENT Server on port #{port}")
-    OpentelemetryBandit.setup()
-    OpentelemetryPhoenix.setup(adapter: :bandit)
-
     children = [
       # PromEx metrics
-      ClientSvc.PromEx,
-      ClientSvc.Metrics,
-      {Bandit, plug: ClientRouter, port: port}
+      ClientServiceWeb.Telemetry,
+      ClientService.PromEx,
+      ClientServiceWeb.Endpoint
     ]
 
-    opts = [strategy: :one_for_one, name: ClientSvc.Supervisor]
+    opts = [strategy: :one_for_one, name: ClientService.Supervisor]
     Supervisor.start_link(children, opts)
   end
 end

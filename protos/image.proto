@@ -46,4 +46,8 @@ message ImageConversionResponse {
   // Storage tracking - separate fields for PNG and PDF
   string storage_id = 8;         // PDF storage_id (result)
   string original_storage_id = 9; // PNG storage_id (to delete)
+  string pdf_url = 10;           // MinIO/S3 URL where PDF is stored
+
+  // User context
+  string user_email = 11;        // User who initiated the conversion
 }

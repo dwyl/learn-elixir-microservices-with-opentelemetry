@@ -6,6 +6,17 @@ import Config
 # HTTP Port
 port = System.get_env("CLIENT_SVC_PORT", "8085") |> String.to_integer()
 
+config :client_svc, ClientServiceWeb.Endpoint,
+  url: [host: "localhost"],
+  adapter: Bandit.PhoenixAdapter,
+  http: [
+    ip: {127, 0, 0, 1},
+    port: port
+  ],
+  server: true,
+  check_origin: false,
+  secret_key_base: "lSELLkV2qXzO3PbrZjubtnS84cvDgItzZ3cuQMlmRrM/f5Iy0YHJgn/900qLm7/a"
+
 config :client_svc,
   port: port,
   # Use USER_SVC_URL from docker-compose (http://user_svc:8081) or fallback to localhost for dev

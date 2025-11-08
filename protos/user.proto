@@ -53,3 +53,9 @@ message PdfReadyResponse {
   bool ok = 1;
   string message = 2;
 }
+
+// Simple ack response for image conversion notification
+message NotifyImageConvertedResponse {
+  bool ok = 1;
+  string message = 2;
+}

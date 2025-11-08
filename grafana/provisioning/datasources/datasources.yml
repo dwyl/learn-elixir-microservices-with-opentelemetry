@@ -20,9 +20,33 @@ datasources:
     jsonData:
       maxLines: 1000
 
-  - name: Jaeger
-    type: jaeger
-    uid: jaeger
+  - name: Tempo
+    type: tempo
+    uid: tempo
     access: proxy
-    url: http://jaeger:16686
+    url: http://tempo:3200
     isDefault: false
+    jsonData:
+      # Enable trace to logs correlation
+      tracesToLogsV2:
+        datasourceUid: loki
+        spanStartTimeShift: '-1h'
+        spanEndTimeShift: '1h'
+        tags: ['service', 'trace_id']
+        filterByTraceID: true
+        filterBySpanID: false
+      # Enable trace to metrics correlation
+      tracesToMetrics:
+        datasourceUid: prometheus
+        spanStartTimeShift: '-1h'
+        spanEndTimeShift: '1h'
+        tags: [{ key: 'service.name', value: 'service' }]
+      # Service graph configuration
+      serviceMap:
+        datasourceUid: prometheus
+      nodeGraph:
+        enabled: true
+      search:
+        hide: false
+      lokiSearch:
+        datasourceUid: loki

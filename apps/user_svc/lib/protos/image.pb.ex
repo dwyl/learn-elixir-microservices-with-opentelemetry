@@ -29,4 +29,6 @@ defmodule Mcsv.ImageConversionResponse do
   field :height, 7, type: :int32
   field :storage_id, 8, type: :string, json_name: "storageId"
   field :original_storage_id, 9, type: :string, json_name: "originalStorageId"
+  field :pdf_url, 10, type: :string, json_name: "pdfUrl"
+  field :user_email, 11, type: :string, json_name: "userEmail"
 end

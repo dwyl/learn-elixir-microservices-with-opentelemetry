@@ -1,4 +1,4 @@
-defmodule EmailApp do
+defmodule EmailService.Application do
   use Application
 
   @moduledoc false
@@ -11,12 +11,12 @@ defmodule EmailApp do
     Logger.info("Starting EMAIL Server on port #{port}")
 
     children = [
-      EmailSvc.PromEx,
-      EmailSvc.Metrics,
-      {Bandit, plug: EmailRouter, port: port}
+      EmailService.PromEx,
+      EmailServiceWeb.Telemetry,
+      EmailServiceWeb.Endpoint
     ]
 
-    opts = [strategy: :one_for_one, name: EmailSvc.Supervisor]
+    opts = [strategy: :one_for_one, name: EmailService.Supervisor]
     Supervisor.start_link(children, opts)
   end
 end

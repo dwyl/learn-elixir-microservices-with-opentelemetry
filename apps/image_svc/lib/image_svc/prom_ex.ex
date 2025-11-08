@@ -1,4 +1,4 @@
-defmodule ImageSvc.PromEx do
+defmodule ImageService.PromEx do
   @moduledoc """
   Be sure to add the following to finish setting up PromEx:
 
@@ -61,9 +61,9 @@ defmodule ImageSvc.PromEx do
     [
       # PromEx built in plugins
       Plugins.Application,
-      Plugins.Beam
-      # {Plugins.Phoenix, router: ImageSvcWeb.Router, endpoint: ImageSvcWeb.Endpoint},
-      # Plugins.Ecto,
+      Plugins.Beam,
+      {Plugins.Phoenix, router: ImageSvcWeb.Router, endpoint: ImageSvcWeb.Endpoint},
+      Plugins.Ecto
       # Plugins.Oban,
       # Plugins.PhoenixLiveView,
       # Plugins.Absinthe,
@@ -87,9 +87,9 @@ defmodule ImageSvc.PromEx do
     [
       # PromEx built in Grafana dashboards
       {:prom_ex, "application.json"},
-      {:prom_ex, "beam.json"}
-      # {:prom_ex, "phoenix.json"},
-      # {:prom_ex, "ecto.json"},
+      {:prom_ex, "beam.json"},
+      {:prom_ex, "phoenix.json"},
+      {:prom_ex, "ecto.json"}
       # {:prom_ex, "oban.json"},
       # {:prom_ex, "phoenix_live_view.json"},
       # {:prom_ex, "absinthe.json"},

@@ -1,10 +1,16 @@
 # Discover Microservices with Elixir with Observability
 
-This is a demo of an **Plug/Elixir-based microservices architecture** demonstrating PNG-to-PDF image conversion with email notifications.
+This is a tiny demo of an **Plug/Elixir-based microservices architecture** demonstrating PNG-to-PDF image conversion with email notifications.
 
-The idea of this demo is to use OpenAPI, protocol buffers and use OpenTelemetry to enable the three components of observablity, logs, traces and metrics.
+The idea of this demo is to use OpenAPI, protocol buffers and use OpenTelemetry to collects the three observables, namely logs, traces and metrics.
 
-The system uses quite a few technologies.
+Firtly a quote:
+
+> "Logs, metrics, and traces are often known as the three pillars of observability. While plainly having access to logs, metrics, and traces doesn’t necessarily make systems more observable, these are powerful tools that, if understood well, can unlock the ability to build better systems."
+
+We are only scratching the surface.
+
+The system still uses quite a few technologies.
 
 - `Plug` for simple `Elixir` app
 - `Bandit` for HTTP servers
@@ -14,7 +20,7 @@ The system uses quite a few technologies.
 - `Swoosh` for email delivery
 - `ImageMagick` for image conversion
 - `MinIO` for S3 compatible local-cloud storage
-- `OpenTelemetry` with `Jaeger` for traces
+- `OpenTelemetry` and `Jaeger` for traces with `OpenSearch` back storage
 - `Promtail` with `Loki` linked to `MinIO` for logs
 - `Prometheus` for metrics
 - `Grafana` for global dashboards
@@ -328,7 +334,7 @@ http://localhost:8080?url=specs/email_svc.yaml
 http://localhost:8080?url=specs/image_svc.yaml
 ```
 
-## Observability
+## Observability O11Y
 
 Now that we have our workflows, we want to add observability.
 
@@ -365,10 +371,6 @@ title: Services
 ```
 
 The tools pictured above are designed to be used in a **container** context.
-
-Firtly a quote:
-
-> "Logs, metrics, and traces are often known as the three pillars of observability. While plainly having access to logs, metrics, and traces doesn’t necessarily make systems more observable, these are powerful tools that, if understood well, can unlock the ability to build better systems."
 
 | System     | Purpose                |
 | ---------- | ---------------------- |
@@ -408,7 +410,7 @@ Some explanations about **who does what?**:
 | Jaeger            | PUSH OTLP              | Protobuf (spans)   │   | Memory only! Lost on restart |
 | Grafana           | N/A (UI)               | N/A                    | SQLite   (dashboards only)   |
 
-### Data flow between Services
+### Observables flow between Services
 
 <img src="priv/process_architecture.png" >
 
@@ -687,8 +689,20 @@ conn
 |> send_resp(200, response_binary)
 ```
 
-**Key Points**:
+### Allow protobuf content through Plug.Parser
 
+```elixir
+plug(Plug.Parsers,
+    parsers: [:json],
+    json_decoder: Jason,
+    # !! Skip parsing protobuf
+    >>> pass: ["application/protobuf", "application/x-protobuf"]
+  )
+```
+
+### Key Points
+
+- Setup the `:pass` in Plug.Parser in the _router.ex_
 - **Decode**: `binary_body |> Mcsv.EmailRequest.decode()` → Elixir struct
 - **Encode**: `%Mcsv.EmailResponse{...} |> Mcsv.EmailResponse.encode()` → binary
 - **Content-Type**: Always `application/protobuf` for both request and response
@@ -760,6 +774,8 @@ These `*.pb.ex` files should be used in every app that uses this contract to exc
 
 ### Spans
 
+How to setup spans to get traces.
+
 ```elixir
 require OpenTelemetry.Tracer, as: Tracer
 require OpenTelemetry.Span, as: Span
@@ -799,7 +815,7 @@ Req.post(
 ) 
 ```
 
-## [TODO] Move this! Misc tips & tricks
+## [TODO] Move this somewhere! Misc tips & tricks
 
 The usage of RPC-style endpoints (not RESTful API with dynamic segments) makes observability easier (no `:id` in static paths).
 

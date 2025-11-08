@@ -1,4 +1,4 @@
-defmodule EmailSvc.PromEx do
+defmodule EmailService.PromEx do
   @moduledoc """
   Be sure to add the following to finish setting up PromEx:
 

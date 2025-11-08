@@ -28,7 +28,6 @@ defmodule UserService.Contract.APIContractTest do
         body: request_binary,
         headers: [{"content-type", "application/x-protobuf"}]
       )
-      |> dbg()
 
     # Validate against OpenAPI spec
     assert response.status == 200, "Expected 200 OK as per OpenAPI spec"

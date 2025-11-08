@@ -1,4 +1,4 @@
-defmodule ClientSvc.PromEx do
+defmodule ClientService.PromEx do
   @moduledoc """
   Be sure to add the following to finish setting up PromEx:
 
@@ -61,8 +61,8 @@ defmodule ClientSvc.PromEx do
     [
       # PromEx built in plugins
       Plugins.Application,
-      Plugins.Beam
-      # {Plugins.Phoenix, router: ClientSvcWeb.Router, endpoint: ClientSvcWeb.Endpoint},
+      Plugins.Beam,
+      {Plugins.Phoenix, router: ClientServiceWeb.Router, endpoint: ClientServiceWeb.Endpoint}
       # Plugins.Ecto,
       # Plugins.Oban,
       # Plugins.PhoenixLiveView,

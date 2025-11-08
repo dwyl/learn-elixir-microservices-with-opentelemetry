@@ -31,17 +31,17 @@ defmodule ClientSvc.MixProject do
         # :os_mon,
         :tls_certificate_check
       ],
-      mod: {ClientApp, []}
+      mod: {ClientService.Application, []}
     ]
   end
 
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:phoenix, "~> 1.8"},
       {:bandit, "~> 1.8"},
       {:plug, "~> 1.18"},
       {:req, "~> 0.5.15"},
-      {:phoenix, "~> 1.8"},
       # serializer
       {:jason, "~> 1.4"},
       {:protobuf, "~> 0.15.0"},
@@ -68,6 +68,7 @@ defmodule ClientSvc.MixProject do
       # static tests
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
+      {:credo_naming, "~> 2.1", only: [:dev, :test], runtime: false},
       # test dependencies
       {:yaml_elixir, "~> 2.12", only: :test}
     ]
