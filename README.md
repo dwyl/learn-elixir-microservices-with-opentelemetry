@@ -193,7 +193,7 @@ The container has a bind mount to the _/open_api_ folder.
 
 An example:
 
-<img scr="https://github.com/ndrean/micro_ex/blob/main/priv/openapi-email-svc.png" alt="openapi-email">
+<img src="https://github.com/ndrean/micro_ex/blob/main/priv/openapi-email-svc.png" alt="openapi-email">
 
 ## Observability
 
