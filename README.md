@@ -13,7 +13,6 @@ The system still uses quite a few technologies.
 - Protocol buffers for inter-service communication serialization with a compiled package-like installation
 - background job processing (`Oban`) backed with the database `SQLite`
 - `Swoosh` for email delivery
-- `ImageMagick` for image conversion
 - `MinIO` for S3 compatible local-cloud storage
 - `OpenTelemetry` with `Jaeger` and `Tempo` for traces (the later uses`MinIO` for back storage)
 - `Promtail` with `Loki` linked to `MinIO` for logs
