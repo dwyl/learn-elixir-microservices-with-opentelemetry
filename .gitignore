@@ -25,7 +25,7 @@ test_*
 docs/
 
 apps/job_svc/db/job_service_dev.sql3
-**/*.png
+**/test.png
 .DS_Store
 .vscode/
 
