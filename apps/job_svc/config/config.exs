@@ -32,10 +32,10 @@ config :job_svc, Oban,
     # Reduced from 10 (emails are fast, 3 is plenty)
     emails: 3,
     # Half of CPU cores
-    images: max(2, div(System.schedulers_online(), 2))
+    images: max(10, System.schedulers_online())
   ],
   # Reduced from 100ms (less aggressive polling)
-  poll_interval: 500,
+  poll_interval: 100,
   shutdown_grace_period: 30_000,
   plugins: [
     # Clean old jobs (keep this for DB maintenance)

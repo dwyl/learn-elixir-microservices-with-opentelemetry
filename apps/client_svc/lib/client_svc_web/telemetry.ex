@@ -28,7 +28,7 @@ defmodule ClientServiceWeb.Telemetry do
       {:telemetry_poller, measurements: periodic_measurements(), period: 10_000}
     ]
 
-    # ✅ Attach OpenTelemetry handlers for automatic span creation
+    # Attach OpenTelemetry handlers for automatic span creation
     :ok = setup_opentelemetry_handlers()
 
     Supervisor.init(children, strategy: :one_for_one)

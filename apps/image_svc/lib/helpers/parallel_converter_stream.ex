@@ -14,6 +14,7 @@ defmodule ImageSvc.ParallelConverterStream do
   """
 
   require Logger
+  require OpenTelemetry.Tracer
 
   @doc """
   Convert image binary to PDF using streaming ImageMagick.
@@ -58,40 +59,63 @@ defmodule ImageSvc.ParallelConverterStream do
     full_cmd = ["magick" | args]
     Logger.info("[ParallelConverterStream] Running: #{Enum.join(full_cmd, " ")}")
 
-    try do
-      # Stream without stderr capture first - simpler
-      pdf_binary =
-        ExCmd.stream!(full_cmd, input: input_stream)
-        |> Enum.reduce(<<>>, fn chunk, acc -> acc <> chunk end)
+    OpenTelemetry.Tracer.with_span "imagemagick.convert", %{
+      "imagemagick.input_format" => input_format,
+      "imagemagick.quality" => quality,
+      "imagemagick.threads" => threads,
+      "imagemagick.input_size_bytes" => byte_size(image_binary)
+    } do
+      try do
+        # Stream without stderr capture first - simpler
+        pdf_binary =
+          ExCmd.stream!(full_cmd, input: input_stream)
+          |> Enum.reduce(<<>>, fn chunk, acc -> acc <> chunk end)
 
-      duration = System.monotonic_time(:millisecond) - start_time
+        duration = System.monotonic_time(:millisecond) - start_time
 
-      Logger.info(
-        "[ParallelConverterStream] Success (#{duration}ms): #{byte_size(pdf_binary)} bytes"
-      )
-
-      # Emit telemetry for metrics
-      :telemetry.execute(
-        [:image_svc, :conversion, :complete],
-        %{duration: duration, size_bytes: byte_size(pdf_binary)},
-        %{quality: quality, threads: threads, method: :stream}
-      )
-
-      {:ok, pdf_binary}
-    rescue
-      e in ExCmd.Stream.AbnormalExit ->
-        Logger.error(
-          "[ParallelConverterStream] ImageMagick failed with exit code #{e.exit_status}: #{Exception.message(e)}"
+        Logger.info(
+          "[ParallelConverterStream] Success (#{duration}ms): #{byte_size(pdf_binary)} bytes"
         )
 
-        Logger.error("[ParallelConverterStream] Command was: #{Enum.join(full_cmd, " ")}")
+        # Set OpenTelemetry attributes for output
+        OpenTelemetry.Tracer.set_attributes(%{
+          "imagemagick.output_size_bytes" => byte_size(pdf_binary),
+          "imagemagick.duration_ms" => duration
+        })
 
-        {:error, {:conversion_failed, e.exit_status, Exception.message(e)}}
+        OpenTelemetry.Tracer.set_status(:ok)
 
-      e ->
-        Logger.error("[ParallelConverterStream] Unexpected error: #{Exception.message(e)}")
-        Logger.error("[ParallelConverterStream] Error: #{inspect(e)}")
-        {:error, {:unexpected_error, Exception.message(e)}}
+        # Emit telemetry for metrics
+        :telemetry.execute(
+          [:image_svc, :conversion, :complete],
+          %{duration: duration, size_bytes: byte_size(pdf_binary)},
+          %{quality: quality, threads: threads, method: :stream}
+        )
+
+        {:ok, pdf_binary}
+      rescue
+        e in ExCmd.Stream.AbnormalExit ->
+          Logger.error(
+            "[ParallelConverterStream] ImageMagick failed with exit code #{e.exit_status}: #{Exception.message(e)}"
+          )
+
+          Logger.error("[ParallelConverterStream] Command was: #{Enum.join(full_cmd, " ")}")
+
+          OpenTelemetry.Tracer.set_status(
+            :error,
+            "ImageMagick exit #{e.exit_status}: #{Exception.message(e)}"
+          )
+
+          {:error, {:conversion_failed, e.exit_status, Exception.message(e)}}
+
+        e ->
+          Logger.error("[ParallelConverterStream] Unexpected error: #{Exception.message(e)}")
+          Logger.error("[ParallelConverterStream] Error: #{inspect(e)}")
+
+          OpenTelemetry.Tracer.set_status(:error, Exception.message(e))
+
+          {:error, {:unexpected_error, Exception.message(e)}}
+      end
     end
   end
 

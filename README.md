@@ -41,7 +41,7 @@ Ensure you have the following installed on your system:
 
 The **Docker setup**:
 
-- Setup the `watch` in _docker-compose.yml_ (rebuilds on code change)
+- You can setup the `watch` in _docker-compose.yml_ to trigger rebuilds on code change:
 
 ```yml
 develop:
@@ -52,7 +52,7 @@ develop:
           path: ./apps/client_svc/mix.exs
 ```
 
-- Run the _watch_ mode:
+and run the _watch_ mode:
 
 ```sh
 docker compose up --watch
@@ -66,278 +66,6 @@ docker exec -it msvc-client-svc bin/client_svc remote
 # Interactive Elixir (1.19.2) - press Ctrl+C to exit (type h() ENTER for help)
 
 # iex(client_svc@ba41c71bacac)1> ImageClient.convert_png("my-image.png", "me@com")
-```
-
-## Services Overview
-
-```mermaid
-architecture-beta
-    group api(cloud)[API]
-    service client(internet)[Client] in api
-    service s3(disk)[S3 MinIO] in api
-    service user(server)[User] in api
-    service job(server)[Job] in api
-    service db(database)[DB SQLite] in api
-    service email(internet)[SMTP] in api
-    service image(disk)[Image] in api
-
-    client:R -- L:user
-    image:R --> L:s3
-    job:B -- T:user
-    email:R -- L:job
-    image:B -- T:job
-    db:L -- R:job
-    user:R -- L:s3
-```
-
-### Client service
-
-- **Purpose**: External client interface for testing
-- **Key Features**:
-  - triggers User creation with concurrent streaming
-  - triggers PNG conversion of PNG images
-  - Receives final workflow callbacks
-
-### User service
-
-- **Purpose**: Entry Gateway for user operations and workflow orchestration
-- **Key Features**:
-  - User creation and email job dispatch
-  - Image conversion workflow orchestration
-  - Image storage with presigned URLs
-  - Completion callback relay to clients
-
-### Job service
-
-- **Purpose**: Background job processing orchestrator
-- **Key Features**:
-  - Oban-based job queue (SQLite database)
-  - Email worker for welcome emails
-  - Image conversion worker
-  - Job retry logic and monitoring
-
-### Email service
-
-- **Purpose**: Email delivery service
-- **Key Features**:
-  - Swoosh email delivery
-  - Email templates (welcome, notification, conversion complete)
-  - Delivery callbacks
-
-### Image service
-
-- **Purpose**: Image conversion  service
-- **Key Features**:
-  - PNG>PDF conversion using ImageMagick
-  - S3 storage of converted image
-
-### Workflow example: Email Notification
-
-This workflow demonstrates async email notifications using Oban and Swoosh.
-
-```mermaid
-sequenceDiagram
-    Client->>+User: event <br> send email
-    User->>+ObanJob: dispatch event
-    ObanJob ->> ObanJob: enqueue Job <br> trigger async Worker
-    ObanJob-->>+Email: do email job
-    Email -->>Email: send email
-    Email -->>Client: email sent
-```
-
-**Key Features**:
-
-- Concurrent request handling via `Task.async_stream`
-- Async processing after job enqueue
-- Oban retry logic for failed emails
-- Callback chain for status tracking
-
-### Workflow Example: PNG to PDF Conversion (Pull Model)
-
-This workflow demonstrates efficient binary data handling using the "Pull Model" or "Presigned URL Pattern" (similar to AWS S3). Instead of passing large image binaries through the service chain, only metadata and URLs are transmitted.
-
-- **Pull Model & Presigned URLs**: Image service fetches data on-demand via temporary URLs (using AWS S3 pattern)
-
-```mermaid
-sequenceDiagram
-    Client->>+User: event <br><image:binary>
-    User -->>User: create presigned-URL<br> S3 storage
-    User->>+ObanJob: event <br><convert:URL>
-    ObanJob ->> ObanJob: enqueue a Job <br> trigger async Worker
-    ObanJob-->>+Image: do convert
-    Image -->> +S3: fetch binary
-    Image -->> Image: convert<br> new presigned-URL
-    Image -->>S3: save new presigned-URL
-    Image -->>ObanJob: URL
-    ObanJob ->>User: URL
-    User ->>Client: URL
-```
-
-## OpenAPI Documentation
-
-You receive a ticket to implement an API. You start by defining the OpenAPISpecs.
-
-The OpenAPI specs document the HTTP interface and schemas (contracts).
-
-The protobuf contract will implement these specs.
-
-The manual YAML specs are:
-
-- [client_svc.ymal](https://github.com/ndrean/micro_ex/blob/main/)openapi/client_svc.yaml) -- Client entrypoint (port 8085)
-- [user_svc.yaml]([https://github.com/ndrean/micro_ex/blob/main/)openapi/user_svc.yaml) - User Gateway service (port 8081)
-- [job_svc.yaml](https://github.com/ndrean/micro_ex/blob/main/openapi/job_svc.yaml) - Oban job queue service (port 8082)  
-- [email_svc.yaml](https://github.com/ndrean/micro_ex/blob/main/openapi/email_svc.yaml) - Email delivery service (port 8083)
-- [image_svc.yaml](https://github.com/ndrean/micro_ex/blob/main/openapi/image_svc.yaml) - Image processing service (port 8084)
-
-We expose the documentation via a `SwaggerUI` container (port 8087).
-
-The container has a bind mount to the _/open_api_ folder.
-
-An example:
-
-<img src="https://github.com/ndrean/micro_ex/blob/main/priv/openapi-email-svc.png" alt="openapi-email">
-
-## Observability
-
-Now that we have our workflows, we want to add observability.
-
-Firtly a quote:
-
-> "Logs, metrics, and traces are often known as the three pillars of observability. While plainly having access to logs, metrics, and traces doesn’t necessarily make systems more observable, these are powerful tools that, if understood well, can unlock the ability to build better systems."
-
-We will only scratch the surface of observability.
-
-```mermaid
-architecture-beta
-  group logs(cloud)[O11Y]
-    service loki(cloud)[Loki_3100 aggregator] in logs
-    service promtail(disk)[Promtail_9080 logs] in logs
-    service jaeger(cloud)[Jaeger_4317 traces] in logs
-    service sdtout(cloud)[SDTOUT OTEL] in logs
-    service graf(cloud)[Grafana] in logs
-    service promex(cloud)[PromEx Metrics] in logs
-
-    sdtout:T --> B:promex
-    promex:R -- T:graf
-    sdtout:R --> L:jaeger
-    jaeger:R -- T:graf
-    loki:R -- L:graf
-    sdtout:B --> T:promtail
-    loki:L <-- R:promtail
-```
-
-### Stack Overview
-
-The big picture:
-
-```mermaid
----
-title: Services
----
-  flowchart TD
-      subgraph SVC[microservices]
-          MS[All microservices<br>---<br> stdout]
-          MSOTEM[microservice<br>OpenTelemetry]
-      end
-      subgraph OBS[observability]
-          MS-->|HTTP stream| Promtail
-          Promtail -->|:3100| Loki
-          Loki -->|:3100| Grafana
-          Loki <-.->|:9000| MinIO
-          Jaeger -->|:16686| Grafana
-          Grafana -->|:3000| Browser
-          MinIO -->|:9001| Browser
-          MSOTEM -->|gRPC:4317| Jaeger
-      end
-```
-
-```mermaid
----
-title: Documentation
---- 
-
-  flowchart LR
-    Swagger --> |:8087| UI
-```
-
-The tools pictured above are designed to be used in a **container** context.
-
-| System     | Purpose                |
-| ---------- | ---------------------- |
-| Prometheus | Metrics scrapper       |
-| Loki       | Logs scrapper          |
-| Jaeger     | Traces collection      |
-| Grafana    | Reporting & Dashboards |
-
-Some explanations about **who does what?**:
-
-- METRICS: `Prometheus`
-  "How much CPU/memory/time?
-  "What's my p95 latency?"
-  "How many requests per second?"
-  "Is memory usage growing?"
-  "Which endpoint is slowest?"
-
-- LOGS: `Loki`
-  Centralized logs from all services
-  "Show me all errors in the last hour"
-  "What did user X do?"
-  "Find logs containing 'timeout'"
-  "What happened before the crash?"
-
-- TRACING: `Jaeger`
-  Full journey accross services
-  "Which service is slow in this request?"
-  "How does a request flow through services?"
-  "Where did this request fail?"
-  "What's the call graph?"
-
-| System            | Model                                       | Format                 | Storage                                        |
-| ----------------- | ------------------------------------------- | ---------------------- | ---------------------------------------------- |
-| Prometheus        | PULL (scrape)                               | Plain text             | Disk (TimeSerieDB)                             |
-|                   | GET /metrics Every 15s                      | key=value              | prometheus-data                                |
-| Loki via Promtail | PUSH  Batched                               | JSON (logs) structured | MinIO (S3) loki-chunks                         |
-| Jaeger (or Tempo) | PUSH OTLP                                   | Protobuf (spans)   │   | - Jaeger: memory only <br> - Tempo: S3 storage |
-| Grafana           | UI only, connected to Loki / Jaeger / Tempo | -                      | SQLite   (dashboards only)                     |
-
-### Trace pipeline
-
-In dev mode, `Jaeger` offers a UI frontend (whilst not `Tempo`).
-
-```mermaid
----
-title: Application Services and Trace pipeline
---- 
-
-flowchart TD
-    subgraph Traces[Each Service is a Trace Producer]
-        UE[User Svc<br> --- <br> OpenTelemetry SDK<br>buffer structured spans]
-    end
-
-    subgraph Cons[Traces consumer]
-        J[Jaeger:16686<br>in-memory<br>traces]
-    end
-
-    subgraph Viz[Traces visulizers]
-        G[Grafana:3000]
-        UI[Browser]
-    end
-
-    UE -->|batch ~5s<br>POST:4318<br> protobuf|J
-
-    G[GRAFANA<br>] -->|GET:16686<br>/api/traces|J
-    UI-->|:3000| G
-    UI-->|:16686|J
-```
-
-> If you run  locally with Docker, you can use the Docker daemon and use a `loki` driver to read and push the logs from stdout (in the docker socket) to Loki.
-
-> We used instead `Promtail` to consume the logs and push them to Loki. This solution is more K8 ready.
-
-> To use a local `loki` driver, we need to isntall it:
-
-```sh
-docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
 ```
 
 ## Protobuf
@@ -560,11 +288,388 @@ RUN mix compile
 
 [<img src="https://github.com/ndrean/micro_ex/blob/main/priv/ALeopardi-share-protobuf.png" with="300">](https://andrealeopardi.com/posts/sharing-protobuf-schemas-across-services/)
 
+## OpenAPI Documentation
+
+You receive a ticket to implement an API. You start by defining the OpenAPISpecs.
+
+The OpenAPI specs document the HTTP interface and schemas (contracts).
+
+The protobuf contract will implement these specs.
+
+The manual YAML specs are:
+
+- [client_svc.ymal](https://github.com/ndrean/micro_ex/blob/main/)openapi/client_svc.yaml) -- Client entrypoint (port 8085)
+- [user_svc.yaml]([https://github.com/ndrean/micro_ex/blob/main/)openapi/user_svc.yaml) - User Gateway service (port 8081)
+- [job_svc.yaml](https://github.com/ndrean/micro_ex/blob/main/openapi/job_svc.yaml) - Oban job queue service (port 8082)  
+- [email_svc.yaml](https://github.com/ndrean/micro_ex/blob/main/openapi/email_svc.yaml) - Email delivery service (port 8083)
+- [image_svc.yaml](https://github.com/ndrean/micro_ex/blob/main/openapi/image_svc.yaml) - Image processing service (port 8084)
+
+We expose the documentation via a `SwaggerUI` container (port 8087).
+
+The container has a bind mount to the _/open_api_ folder.
+
+An example:
+
+<img src="https://github.com/ndrean/micro_ex/blob/main/priv/openapi-email-svc.png" alt="openapi-email">
+
+## Services Overview
+
+```mermaid
+architecture-beta
+    group api(cloud)[API]
+    service client(internet)[Client] in api
+    service s3(disk)[S3 MinIO] in api
+    service user(server)[User] in api
+    service job(server)[Job] in api
+    service db(database)[DB SQLite] in api
+    service email(internet)[SMTP] in api
+    service image(disk)[Image] in api
+
+    client:R -- L:user
+    image:R --> L:s3
+    job:B -- T:user
+    email:R -- L:job
+    image:B -- T:job
+    db:L -- R:job
+    user:R -- L:s3
+```
+
+### Client service
+
+- **Purpose**: External client interface for testing
+- **Key Features**:
+  - triggers User creation with concurrent streaming
+  - triggers PNG conversion of PNG images
+  - Receives final workflow callbacks
+
+### User service
+
+- **Purpose**: Entry Gateway for user operations and workflow orchestration
+- **Key Features**:
+  - User creation and email job dispatch
+  - Image conversion workflow orchestration
+  - Image storage with presigned URLs
+  - Completion callback relay to clients
+
+### Job service
+
+- **Purpose**: Background job processing orchestrator
+- **Key Features**:
+  - Oban-based job queue (SQLite database)
+  - Email worker for welcome emails
+  - Image conversion worker
+  - Job retry logic and monitoring
+
+### Email service
+
+- **Purpose**: Email delivery service
+- **Key Features**:
+  - Swoosh email delivery
+  - Email templates (welcome, notification, conversion complete)
+  - Delivery callbacks
+
+### Image service
+
+- **Purpose**: Image conversion  service
+- **Key Features**:
+  - PNG>PDF conversion using ImageMagick
+  - S3 storage of converted image
+
+### Workflow example: Email Notification
+
+This workflow demonstrates async email notifications using Oban and Swoosh.
+
+```mermaid
+sequenceDiagram
+    Client->>+User: event <br> send email
+    User->>+ObanJob: dispatch event
+    ObanJob ->> ObanJob: enqueue Job <br> trigger async Worker
+    ObanJob-->>+Email: do email job
+    Email -->>Email: send email
+    Email -->>Client: email sent
+```
+
+**Key Features**:
+
+- Concurrent request handling via `Task.async_stream`
+- Async processing after job enqueue
+- Oban retry logic for failed emails
+- Callback chain for status tracking
+
+Example of trace propagation via telemetry of the previsou flow:
+
+<img src="https://github.com/ndrean/micro_ex/blob/main/priv/trace-email.png" alt="trace-email">
+
+### Workflow Example: PNG to PDF Conversion (Pull Model)
+
+This workflow demonstrates efficient binary data handling using the "Pull Model" or "Presigned URL Pattern" (similar to AWS S3). Instead of passing large image binaries through the service chain, only metadata and URLs are transmitted.
+
+- **Pull Model & Presigned URLs**: Image service fetches data on-demand via temporary URLs (using AWS S3 pattern)
+
+```mermaid
+sequenceDiagram
+    Client->>+User: event <br><image:binary>
+    User -->>User: create presigned-URL<br> S3 storage
+    User->>+ObanJob: event <br><convert:URL>
+    ObanJob ->> ObanJob: enqueue a Job <br> trigger async Worker
+    ObanJob-->>+Image: do convert
+    Image -->> +S3: fetch binary
+    Image -->> Image: convert<br> new presigned-URL
+    Image -->>S3: save new presigned-URL
+    Image -->>ObanJob: URL
+    ObanJob ->>User: URL
+    User ->>Client: URL
+```
+
+Example of trace propagation via telemetry of the previsou flow:
+
+<img src="https://github.com/ndrean/micro_ex/blob/main/priv/trace-image-convert.png" alt="trace-image">
+
+## Observability
+
+Now that we have our workflows, we want to add observability.
+
+Firtly a quote:
+
+> "Logs, metrics, and traces are often known as the three pillars of observability. While plainly having access to logs, metrics, and traces doesn’t necessarily make systems more observable, these are powerful tools that, if understood well, can unlock the ability to build better systems."
+
+We will only scratch the surface of observability.
+
+```mermaid
+architecture-beta
+  group logs(cloud)[O11Y]
+    service loki(cloud)[Loki_3100 aggregator] in logs
+    service promtail(disk)[Promtail_9080 logs] in logs
+    service jaeger(cloud)[Jaeger_4317 traces] in logs
+    service sdtout(cloud)[SDTOUT OTEL] in logs
+    service graf(cloud)[Grafana] in logs
+    service promex(cloud)[PromEx Metrics] in logs
+
+    sdtout:T --> B:promex
+    promex:R -- T:graf
+    sdtout:R --> L:jaeger
+    jaeger:R -- T:graf
+    loki:R -- L:graf
+    sdtout:B --> T:promtail
+    loki:L <-- R:promtail
+```
+
+### Stack Overview
+
+The big picture:
+
+```mermaid
+---
+title: Services
+---
+  flowchart TD
+      subgraph SVC[microservices]
+          MS[All microservices<br>---<br> stdout]
+          MSOTEM[microservice<br>OpenTelemetry]
+      end
+      subgraph OBS[observability]
+          MS-->|HTTP stream| Promtail
+          Promtail -->|:3100| Loki
+          Loki -->|:3100| Grafana
+          Loki <-.->|:9000| MinIO
+          Jaeger -->|:16686| Grafana
+          Grafana -->|:3000| Browser
+          MinIO -->|:9001| Browser
+          MSOTEM -->|gRPC:4317| Jaeger
+      end
+```
+
+```mermaid
+---
+title: Documentation
+--- 
+
+  flowchart LR
+    Swagger --> |:8087| UI
+```
+
+The tools pictured above are designed to be used in a **container** context.
+
+| System     | Purpose                |
+| ---------- | ---------------------- |
+| Prometheus | Metrics scrapper       |
+| Loki       | Logs scrapper          |
+| Jaeger     | Traces collection      |
+| Grafana    | Reporting & Dashboards |
+
+Some explanations about **who does what?**:
+
+- METRICS: `Prometheus`
+  "How much CPU/memory/time?
+  "What's my p95 latency?"
+  "How many requests per second?"
+  "Is memory usage growing?"
+  "Which endpoint is slowest?"
+
+- LOGS: `Loki`
+  Centralized logs from all services
+  "Show me all errors in the last hour"
+  "What did user X do?"
+  "Find logs containing 'timeout'"
+  "What happened before the crash?"
+
+- TRACING: `Jaeger`
+  Full journey accross services
+  "Which service is slow in this request?"
+  "How does a request flow through services?"
+  "Where did this request fail?"
+  "What's the call graph?"
+
+| System            | Model                                       | Format                 | Storage                                        |
+| ----------------- | ------------------------------------------- | ---------------------- | ---------------------------------------------- |
+| Prometheus        | PULL (scrape)                               | Plain text             | Disk (TimeSerieDB)                             |
+|                   | GET /metrics Every 15s                      | key=value              | prometheus-data                                |
+| Loki via Promtail | PUSH  Batched                               | JSON (logs) structured | MinIO (S3) loki-chunks                         |
+| Jaeger (or Tempo) | PUSH OTLP                                   | Protobuf (spans)   │   | - Jaeger: memory only <br> - Tempo: S3 storage |
+| Grafana           | UI only, connected to Loki / Jaeger / Tempo | -                      | SQLite   (dashboards only)                     |
+
+### Trace pipeline
+
+In dev mode, `Jaeger` offers a UI frontend (whilst not `Tempo`).
+
+```mermaid
+---
+title: Application Services and Trace pipeline
+--- 
+
+flowchart TD
+    subgraph Traces[Each Service is a Trace Producer]
+        UE[User Svc<br> --- <br> OpenTelemetry SDK<br>buffer structured spans]
+    end
+
+    subgraph Cons[Traces consumer]
+        J[Jaeger:16686<br>in-memory<br>traces]
+    end
+
+    subgraph Viz[Traces visulizers]
+        G[Grafana:3000]
+        UI[Browser]
+    end
+
+    UE -->|batch ~5s<br>POST:4318<br> protobuf|J
+
+    G[GRAFANA<br>] -->|GET:16686<br>/api/traces|J
+    UI-->|:3000| G
+    UI-->|:16686|J
+```
+
+> If you run  locally with Docker, you can use the Docker daemon and use a `loki` driver to read and push the logs from stdout (in the docker socket) to Loki.
+
+> We used instead `Promtail` to consume the logs and push them to Loki. This solution is more K8 ready.
+
+> To use a local `loki` driver, we need to isntall it:
+
+```sh
+docker plugin install grafana/loki-docker-driver:latest --alias loki --grant-all-permissions
+```
+
 ## OpenTelemetry
 
-### Spans
+### Setup
 
-How to setup spans to get traces.
+We use `Phoenix` and `Req`.
+
+**dependencies**: a bunch to add (`PromEx` is for Grafana dashboards for collect Beam metrics and more generally Prometheus metrics in a custom designed dashboard)
+
+```elixir
+{:opentelemetry_exporter, "~> 1.10"},
+{:opentelemetry_api, "~> 1.5"},
+{:opentelemetry_ecto, "~> 1.2"},
+{:opentelemetry, "~> 1.7"},
+{:opentelemetry_phoenix, "~> 2.0"},
+{:opentelemetry_bandit, "~> 0.3.0"},
+{:opentelemetry_req, "~> 1.0"},
+{:tls_certificate_check, "~> 1.29"},
+
+# Prometheus metrics
+{:prom_ex, "~> 1.11.0"},
+{:telemetry_metrics_prometheus_core, "~> 1.2"},
+{:telemetry_poller, "~> 1.3"},
+```
+
+In _endpoint.ex_, check that you have:
+
+```elixir
+# Request ID for distributed tracing correlation
+plug(Plug.RequestId)
+
+# Phoenix telemetry (emits events for OpenTelemetry)
+plug(Plug.Telemetry, event_prefix: [:phoenix, :endpoint])
+```
+
+In the macro injector module (_my_app_web.ex_), add `OpenTelemetry.Tracer` so that it is present in each controller.
+
+```elixir
+def controller do
+  quote do
+    use Phoenix.Controller, formats: [:json]
+
+    import Plug.Conn
+    require OpenTelemetry.Tracer, as: Tracer
+  end
+end
+```
+
+In _telemetry.ex_, your `init` callback looks like:
+
+```elixir
+def init(_arg) do
+  Logger.info("[ClientService.Telemetry] Setting up OpenTelemetry instrumentation")
+
+  children = [
+    # Telemetry poller for VM metrics (CPU, memory, etc.)
+    {:telemetry_poller, measurements: periodic_measurements(), period: 10_000}
+  ]
+
+  :ok = setup_opentelemetry_handlers()
+
+  Supervisor.init(children, strategy: :one_for_one)
+end
+
+defp setup_opentelemetry_handlers do
+  # 1. Phoenix automatic instrumentation
+  # Creates spans for every HTTP request with route, method, status
+  :ok = OpentelemetryPhoenix.setup(adapter: :bandit)
+
+  # 2. Bandit HTTP server instrumentation 
+  :ok = OpentelemetryBandit.setup(opt_in_attrs: [])
+end
+```
+
+### Propagation traces with Req
+
+Use `OpentelemetryReq.attach(propagate_trace_headers: true)` as [explained in OpenTelemetry_Req](https://hexdocs.pm/opentelemetry_req/OpentelemetryReq.html#module-trace-header-propagation) and as shown below:
+
+```elixir
+defp post(%Mcsv.V2.UserRequest{} = user, base, uri) do
+  binary = Mcsv.V2.UserRequest.encode(user)
+
+  Req.new(base_url: base)
+  |> OpentelemetryReq.attach(propagate_trace_headers: true)
+  |> Req.post(
+    url: uri,
+    body: binary,
+    headers: [{"content-type", "application/protobuf"}]
+  )
+end
+```
+
+### Start a trace
+
+The _trace context_ is automatically propagated.
+
+When we use `with_span`, we get the _parent-child_ relationship.
+
+- you get the current active span from the context
+- Sets the new span as a child of that span
+- Restores the previous span when done
+
+> `Baggage` is when you need metadata available in all downstream spans (userID,...). We don't use this here.
 
 ```elixir
 require OpenTelemetry.Tracer, as: Tracer
@@ -578,31 +683,15 @@ def function_to_span(...) do
   [...]
 ```
 
-- Propagate spans
-  
-
-[TODO]
-
-`:otel_propagator_text_map.inject`:
+If you use an _async_ call, you _must_ propagate it with  `Ctx.get_current()`, and `Ctx.attach(ctx)`:
 
 ```elixir
-# Inject OpenTelemetry trace context into job args
-    trace_headers = :otel_propagator_text_map.inject([])
-    trace_context = Map.new(trace_headers)
-```
+ctx = OpenTelemetry.Ctx.get_current()
 
-- add `:opentelemetry_req`
-- use `OpentelemetryReq.attach(propagate_trace_headers: true)`
-
-```elixir
-Req.post(
-   Req.new(base_url: base)
-    |> OpentelemetryReq.attach(propagate_trace_headers: true),
-     url: path,
-     body: body,
-      headers: [{"content-type", "application/protobuf"}],
-      receive_timeout: receive_timeout
-) 
+Task.async(fn ->
+  OpenTelemetry.Ctx.attach(ctx)
+  ImageMagick.get_image_info(image_binary)
+end)
 ```
 
 ## COCOMO Complexity Analysis of this project
@@ -641,17 +730,7 @@ Estimated People Required (organic) 5.65
 - 1oki aggregates logs from 5 or 5000 pods
 - Jaeger traces 5 or 50 microservices
 
-1. **Cost in production**:
-
-```txt
-5 Elixir apps × 512MB = 2.5GB
-Observability stack    = 2GB (Prometheus/Loki data stores)
-Total                  = 4.5GB
-
-50 Elixir apps × 512MB = 25GB
-Observability stack    = 3GB (same containers, more data)
-Total                  = 28GB (~10% overhead)
-```
+**Background Jobs & ImageService**: you cannot scale easily the ImageService with an ObanService.
 
 **Production Optimization**:
 
@@ -759,21 +838,9 @@ iex(client_svc@b6d94600b7e3)6> Stream.interate(50) |> Task.async_stream(fn _ -> 
    - Measure throughput, latency percentiles (p50, p95, p99)
    - Example: Can the system handle 1000 concurrent image conversions?
 
-7. **Chaos Engineering** (Production-like environments):
-   - **What it is**: Deliberately inject failures to verify resilience
-   - **Tools**: Chaos Mesh, Gremlin, Toxiproxy
-   - **Examples**:
-     - Kill random containers (test retry logic)
-     - Inject network latency (test timeouts)
-     - Fill disk to 100% (test error handling)
-     - Corrupt Protobuf messages (test validation)
-   - **Goal**: Discover weaknesses before they cause outages
-
-## [TODO] Move this somewhere! Misc tips & tricks
+## Misc tips & tricks
 
 The usage of RPC-style endpoints (not RESTful API with dynamic segments) makes observability easier (no `:id` in static paths).
-
-Tracing: headers are injected to follow the trace: `_otel_trace_context`
 
 Prometheus via `:promex`. We named "prometheus" the datasource name in the onfiguration file _prometheus.yml_  under the key `:uid`.
 

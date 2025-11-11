@@ -62,15 +62,15 @@ defmodule ImageService.PromEx do
       # PromEx built in plugins
       Plugins.Application,
       Plugins.Beam,
-      {Plugins.Phoenix, router: ImageSvcWeb.Router, endpoint: ImageSvcWeb.Endpoint}
+      {Plugins.Phoenix, router: ImageSvcWeb.Router, endpoint: ImageSvcWeb.Endpoint},
       # Plugins.Ecto
       # Plugins.Oban,
       # Plugins.PhoenixLiveView,
       # Plugins.Absinthe,
       # Plugins.Broadway,
 
-      # Add your own PromEx metrics plugins
-      # ImageSvc.Users.PromExPlugin
+      # Custom metrics plugins
+      ImageSvc.ImageConversionMetrics
     ]
   end
 
