@@ -11,7 +11,19 @@ defmodule ImageSvc.MixProject do
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      releases: releases()
+      releases: releases(),
+      aliases: aliases()
+    ]
+  end
+
+  defp aliases do
+    [
+      "protos.refresh": [
+        "deps.clean protos --build",
+        "deps.get",
+        "compile --force"
+      ],
+      refresh: ["format", "protos.refresh", "dialyzer", "credo"]
     ]
   end
 
@@ -63,10 +75,6 @@ defmodule ImageSvc.MixProject do
       {:protobuf, "~> 0.15.0"},
       {:jason, "~> 1.4"},
       {:ex_cmd, "~> 0.16.0"},
-      # Database
-      {:ecto_sql, "~> 3.12"},
-      {:ecto_sqlite3, "~> 0.18"},
-      {:exqlite, "~> 0.33.1"},
 
       # OpenTelemetry for distributed tracing (exporter MUST be before opentelemetry)
       {:opentelemetry, "~> 1.7"},

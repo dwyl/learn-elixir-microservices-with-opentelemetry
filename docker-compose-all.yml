@@ -404,7 +404,7 @@ services:
       # Service-specific configuration
       URLS: >
         [
-          { url: "specs/client_svc.yaml", name: "Client Serrvice (${CLIENT_SVC_PORT})"},
+          { url: "specs/client_svc.yaml", name: "Client Service (${CLIENT_SVC_PORT})"},
           { url: "specs/user_svc.yaml", name: "User Service (${USER_SVC_PORT})" },
           { url: "specs/job_svc.yaml", name: "Job Service (${JOB_SVC_PORT})" },
           { url: "specs/image_svc.yaml", name: "Image Service (${IMAGE_SVC_PORT})" },

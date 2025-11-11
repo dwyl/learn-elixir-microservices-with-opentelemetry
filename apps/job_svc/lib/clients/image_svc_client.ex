@@ -25,7 +25,7 @@ defmodule JobService.Clients.ImageSvcClient do
 
   @spec convert_image(map()) :: :ok | {:error, any()}
   def convert_image(args) do
-    request = %Mcsv.ImageConversionRequest{
+    request = %Mcsv.V2.ImageConversionRequest{
       user_id: args["user_id"],
       user_email: args["user_email"],
       image_url: args["image_url"],
@@ -38,11 +38,11 @@ defmodule JobService.Clients.ImageSvcClient do
       storage_id: args["storage_id"]
     }
 
-    request_binary = Mcsv.ImageConversionRequest.encode(request)
+    request_binary = Mcsv.V2.ImageConversionRequest.encode(request)
 
     case post(image_svc_base_url(), image_svc_endpoints().convert_image, request_binary) do
       {:ok, %{status: 200, body: response_binary}} ->
-        response = Mcsv.ImageConversionResponse.decode(response_binary)
+        response = Mcsv.V2.ImageConversionResponse.decode(response_binary)
 
         if response.success do
           Logger.info("[Job][ImageSvcClient] Conversion acknowledged: #{response.message}")
@@ -56,7 +56,7 @@ defmodule JobService.Clients.ImageSvcClient do
         end
 
       {:ok, %{status: status, body: body}} ->
-        reason = Mcsv.ImageConversionResponse.decode(body)
+        reason = Mcsv.V2.ImageConversionResponse.decode(body)
         Logger.error("[Job][ImageSvcClient] HTTP #{reason}")
         {:error, "HTTP #{status}"}
 

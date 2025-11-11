@@ -19,7 +19,19 @@ defmodule ClientSvc.MixProject do
           opentelemetry_exporter: :permanent,
           opentelemetry: :temporary
         ]
-      ]
+      ],
+      aliases: aliases()
+    ]
+  end
+
+  defp aliases do
+    [
+      "protos.refresh": [
+        "deps.clean protos --build",
+        "deps.get",
+        "compile --force"
+      ],
+      refresh: ["format", "protos.refresh", "dialyzer", "credo"]
     ]
   end
 

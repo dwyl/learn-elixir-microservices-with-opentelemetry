@@ -20,11 +20,11 @@ defmodule ImageController do
 
       # Return acknowledgment
       response_binary =
-        %Mcsv.UserResponse{
+        %Mcsv.V2.UserResponse{
           ok: true,
           message: "[Job][ImageController] Image job enqueued (oban_job_id: #{oban_job_id})"
         }
-        |> Mcsv.UserResponse.encode()
+        |> Mcsv.V2.UserResponse.encode()
 
       new_conn
       |> put_resp_content_type("application/protobuf")
@@ -39,11 +39,11 @@ defmodule ImageController do
     Logger.error("[Job][ImageController] Failed #{step}: #{inspect(reason)}")
 
     response_binary =
-      %Mcsv.UserResponse{
+      %Mcsv.V2.UserResponse{
         ok: false,
         message: "[Job][ImageController] Failed #{step}: #{inspect(reason)}"
       }
-      |> Mcsv.UserResponse.encode()
+      |> Mcsv.V2.UserResponse.encode()
 
     conn
     |> put_resp_content_type("application/protobuf")
@@ -56,7 +56,7 @@ defmodule ImageController do
 
   #   # Enqueue Oban job
   #   binary_body
-  #   |> Mcsv.ImageConversionRequest.decode()
+  #   |> Mcsv.V2.ImageConversionRequest.decode()
   #   |> enqueue_conversion_job()
   #   |> case do
   #     {:ok, %Oban.Job{id: oban_job_id}} ->
@@ -64,12 +64,12 @@ defmodule ImageController do
 
   #       # Return acknowledgment
   #       response_binary =
-  #         %Mcsv.UserResponse{
+  #         %Mcsv.V2.UserResponse{
   #           ok: true,
   #           message:
   #             "[Job][ImageController] Image conversion job enqueued (oban_job_id: #{oban_job_id})"
   #         }
-  #         |> Mcsv.UserResponse.encode()
+  #         |> Mcsv.V2.UserResponse.encode()
 
   #       new_conn
   #       |> put_resp_content_type("application/protobuf")
@@ -81,11 +81,11 @@ defmodule ImageController do
   #       )
 
   #       response_binary =
-  #         %Mcsv.UserResponse{
+  #         %Mcsv.V2.UserResponse{
   #           ok: false,
   #           message: "[Job][ImageController] Failed to enqueue job: #{inspect(reason)}"
   #         }
-  #         |> Mcsv.UserResponse.encode()
+  #         |> Mcsv.V2.UserResponse.encode()
 
   #       conn
   #       |> put_resp_content_type("application/protobuf")
@@ -95,7 +95,9 @@ defmodule ImageController do
 
   def maybe_decode_request(binary_body) do
     try do
-      %Mcsv.ImageConversionRequest{} = resp = Mcsv.ImageConversionRequest.decode(binary_body)
+      %Mcsv.V2.ImageConversionRequest{} =
+        resp = Mcsv.V2.ImageConversionRequest.decode(binary_body)
+
       {:ok, resp}
     catch
       :error, reason ->
@@ -104,9 +106,9 @@ defmodule ImageController do
     end
   end
 
-  @spec enqueue_conversion_job(Mcsv.ImageConversionRequest.t()) ::
+  @spec enqueue_conversion_job(Mcsv.V2.ImageConversionRequest.t()) ::
           {:ok, Oban.Job.t()} | {:error, any()}
-  defp enqueue_conversion_job(%Mcsv.ImageConversionRequest{} = job_args) do
+  defp enqueue_conversion_job(%Mcsv.V2.ImageConversionRequest{} = job_args) do
     # Inject OpenTelemetry trace context into job args
     trace_headers = :otel_propagator_text_map.inject([])
     trace_context = Map.new(trace_headers)

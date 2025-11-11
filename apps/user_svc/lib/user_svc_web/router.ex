@@ -9,7 +9,7 @@ defmodule UserSvcWeb.Router do
   # RPC-style protobuf endpoints (matches services.proto)
 
   # UserService.CreateUser - Create user and trigger email workflow
-  post("/user_svc/create_user/v1", CreateUserController, :create)
+  post("/user_svc/create_email/v1", CreateEmailController, :create)
 
   # UserService.NotifyEmailSent - Receive callback from job_svc
   post("/user_svc/notify_email_sent/v1", ForwardEmailNotificationController, :forward)

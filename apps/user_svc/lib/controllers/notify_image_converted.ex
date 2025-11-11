@@ -24,8 +24,6 @@ defmodule NotifyImageConvertedController do
       # Forward to client_svc (async)
       ClientSvcClient.notify_image_converted(response)
 
-      # TODO: Delete original PNG from MinIO using response.original_storage_id
-
       conn
       |> send_resp(204, "")
     else
@@ -40,7 +38,7 @@ defmodule NotifyImageConvertedController do
 
   defp decode_image_conversion_response(binary_body) do
     try do
-      response = Mcsv.ImageConversionResponse.decode(binary_body)
+      response = Mcsv.V2.ImageConversionResponse.decode(binary_body)
       {:ok, response}
     rescue
       e ->

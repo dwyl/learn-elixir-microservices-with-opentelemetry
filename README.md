@@ -13,6 +13,7 @@ The system still uses quite a few technologies.
 - Protocol buffers for inter-service communication serialization with a compiled package-like installation
 - background job processing (`Oban`) backed with the database `SQLite`
 - `Swoosh` for email delivery
+- `ExCmd` to stream `ImageMagick`
 - `MinIO` for S3 compatible local-cloud storage
 - `OpenTelemetry` with `Jaeger` and `Tempo` for traces (the later uses`MinIO` for back storage)
 - `Promtail` with `Loki` linked to `MinIO` for logs
@@ -164,10 +165,11 @@ sequenceDiagram
     User->>+ObanJob: event <br><convert:URL>
     ObanJob ->> ObanJob: enqueue a Job <br> trigger async Worker
     ObanJob-->>+Image: do convert
-    Image -->>Image: convert<br>S3 Storage<br>new presigned-URL
-    Image -->>ObanJob: URL converted
-    ObanJob ->>User: URL converted
-    User ->>Client: URL converted
+    Image -->>Image: convert
+    Image -->>+S3-Storage<br>new presigned-URL
+    Image -->>ObanJob: URL
+    ObanJob ->>User: URL
+    User ->>Client: URL
 ```
 
 ## OpenAPI Documentation
@@ -350,11 +352,15 @@ The messages are exchanged in _binary_ form, as opposed to standard plain JSON t
 The main reason of using this format is for _type safety_; the proto files clearly _document_ the contract between services.
 It is not for speed (favor `messagepack`) nor for lowering message size (as opposed to JSON text).
 
+**proto versioning**: create unique qualified names
+
+You can namespace the package, like `package mcsv.v1`, and this will give a message versioned identifier like `Mcsv.V1.EmailRequest`.
+
 **Example protobuf schema** (`email.proto`):
 
 ```proto
 syntax = "proto3";
-package mcsv;
+package mcsv.v1;
 
 message EmailRequest {
   string user_id = 1;
@@ -379,7 +385,7 @@ We use a **Twirp-like RPC DSL** instead of traditional REST. The routes are name
 **Example** ([email_svc/lib/router.ex:15](email_svc/lib/router.ex#L15)):
 
 ```elixir
-post "/email_svc/SendEmail" do
+post "/email_svc/send_email" do
   DeliveryController.send(conn)
 end
 ```
@@ -390,12 +396,12 @@ end
 def send(conn) do
   {:ok, binary_body, conn} = Plug.Conn.read_body(conn)
 
-  # Decode protobuf binary → Elixir struct with pattern matching
-  %Mcsv.EmailRequest{
+  # Decode protobuf binary → Elixir struct with pattern matching + versioning
+  %Mcsv.V1.EmailRequest{
     user_name: name,
     user_email: email,
     email_type: type
-  } = Mcsv.EmailRequest.decode(binary_body)
+  } = Mcsv.V1.EmailRequest.decode(binary_body)
 
   # Process the request...
 end
@@ -406,11 +412,11 @@ end
 ```elixir
 # Build response struct and encode to binary
 response_binary =
-  %Mcsv.EmailResponse{
+  %Mcsv.V1.EmailResponse{
     success: true,
     message: "Welcome email sent to #{email}"
   }
-  |> Mcsv.EmailResponse.encode()
+  |> Mcsv.V1.EmailResponse.encode()
 
 # Send binary response with protobuf content type
 conn
@@ -418,7 +424,7 @@ conn
 |> send_resp(200, response_binary)
 ```
 
-### Allow protobuf content through Plug.Parser
+**Allow protobuf content through Plug.Parser**: allow protobuf to pass through
 
 ```elixir
 plug(Plug.Parsers,
@@ -429,14 +435,13 @@ plug(Plug.Parsers,
   )
 ```
 
-### Key Points
-
-- Setup the `:pass` in Plug.Parser in the _router.ex_
-- **Decode**: `binary_body |> Mcsv.EmailRequest.decode()` → Elixir struct
-- **Encode**: `%Mcsv.EmailResponse{...} |> Mcsv.EmailResponse.encode()` → binary
-- **Content-Type**: Always `application/protobuf` for both request and response
-- **Pattern Matching**: Decode directly into pattern-matched variables for clean code
-- **RPC-Style Routes**: `/service_name/MethodName` (Twirp convention) instead of REST `/resources`
+> TLDR:
+> Setup the `:pass` in Plug.Parser in the _router.ex_
+> **Decode**: `binary_body |> Mcsv.EmailRequest.decode()` → Elixir struct
+> **Encode**: `%Mcsv.EmailResponse{...} |> Mcsv.EmailResponse.encode()` → binary
+> **Content-Type**: Always `application/protobuf` for both request and response
+> **Pattern Matching**: Decode directly into pattern-matched variables for clean code
+> **RPC-Style Routes**: `/service_name/MethodName` (Twirp convention) instead of REST `/resources`
 
 ### Transport
 
@@ -477,11 +482,13 @@ def project do
   [
     compilers: Mix.compilers() ++ [:proto_compiler],
     proto_compiler: [
-      source_dir: "proto_defs",
-      output_dir: "lib/protos"
+      source_dir: "proto_defs/#{protos_version()}",
+      output_dir: "lib/protos/#{protos_version()}"
     ]
   ]
 end
+
+ defp protos_version, do: "V2"
 
 defp deps do
   [
@@ -506,6 +513,16 @@ defp deps do
     {:protobuf, "~> 0.15.0"}
   ]
 end
+```
+
+**version update**: you need to clean the build to pickup the new version
+
+- You create a new subfolder, say _libs/protos/proto_defs/v10_,
+- You update the version in the MixProject, under _protos_version_
+- You run the following command:
+
+```sh
+mix deps.clean protos --build  && mix deps.get && mix compile --force
 ```
 
 **Container implementation** (applies to all service Dockerfiles):
@@ -538,8 +555,7 @@ RUN mix compile
 4. **No manual copying**: Compiled `*.pb.ex` files are generated once and reused
 5. Build automation: No manual `protoc` commands
 6. Container-ready: Works in both dev and Docker environments
-
-**Post from Andrea Leopardi about sharing protobuf across services**
+7. **Higher level of integration**: check the following [blog from Andrea Leopardi](https://andrealeopardi.com/posts/sharing-protobuf-schemas-across-services/) about sharing protobuf across services. The author present a higher level vision of sharing protobuf schemas: produce a hex package and rely on the Hex package and the CI pipeline.
 
 [<img src="https://github.com/ndrean/micro_ex/blob/main/priv/ALeopardi-share-protobuf.png" with="300">](https://andrealeopardi.com/posts/sharing-protobuf-schemas-across-services/)
 

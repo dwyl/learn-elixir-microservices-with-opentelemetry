@@ -10,17 +10,17 @@ servers:
     description: User service server (Docker)
 
 paths:
-  /user_svc/create_user/v1:
+  /user_svc/create_email/v1:
     post:
-      summary: Create user and trigger email workflow
-      operationId: createUser
+      summary: Create email for a user and trigger email workflow
+      operationId: createEmail
       tags:
         - user-management
       description: |
-        Creates a user and enqueues a welcome/notification email via job_svc.
+        Creates an email for a user and enqueues an email job via job_svc.
 
         **Caller**: client_svc/Client.create
-        **Receiver**: user_svc/CreateUserController.create
+        **Receiver**: user_svc/CreateEmailController.create
 
         This endpoint receives UserRequest, forwards it to job_svc for email processing, and returns acknowledgment.
       requestBody:
@@ -464,7 +464,7 @@ components:
       description: EmailResponse protobuf message from email_svc
       required:
         - user_id
-        - email
+        - user_email
         - success
         - message
       properties:
@@ -472,7 +472,7 @@ components:
           type: string
           description: User ID who received the email
           example: "user123"
-        email:
+        user_email:
           type: string
           format: email
           description: Recipient email address

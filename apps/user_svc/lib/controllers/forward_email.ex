@@ -32,7 +32,7 @@ defmodule ForwardEmailNotificationController do
 
   defp decode_response(conn) do
     {:ok, binary_body, conn} = read_body(conn)
-    response = Mcsv.EmailResponse.decode(binary_body)
+    response = Mcsv.V2.EmailResponse.decode(binary_body)
 
     Logger.info(
       "[User][ForwardEmailNotificationController] Email delivery status: #{response.success}"

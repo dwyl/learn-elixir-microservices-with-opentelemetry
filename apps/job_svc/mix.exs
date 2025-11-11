@@ -12,7 +12,8 @@ defmodule JobSvc.MixProject do
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      releases: releases()
+      releases: releases(),
+      aliases: aliases()
     ]
   end
 
@@ -27,6 +28,17 @@ defmodule JobSvc.MixProject do
         include_executables_for: [:unix],
         strip_beams: false
       ]
+    ]
+  end
+
+  defp aliases do
+    [
+      "protos.refresh": [
+        "deps.clean protos --build",
+        "deps.get",
+        "compile --force"
+      ],
+      refresh: ["format", "protos.refresh", "dialyzer", "credo"]
     ]
   end
 

@@ -16,20 +16,19 @@ defmodule Client do
   ## Examples
 
       iex> Client.create(1)
-      %Mcsv.UserResponse{
+      %Mcsv.V2.UserResponse{
         ok: true,
         message: "[EmailSenderController]EMAIL_TYPE_NOTIFICATION email enqueued for  pbuser1@example.com",
         __unknown_fields__: []
       }
   """
-  @spec create(integer()) :: {:ok, Mcsv.UserResponse.t()} | {:error, any()}
   def create(i) do
     Tracer.with_span "#{__MODULE__}.create/1" do
       Tracer.set_attribute(:value, i)
       :ok
     end
 
-    %Mcsv.UserRequest{
+    %Mcsv.V2.UserRequest{
       id: "#{i}",
       name: "PB User #{i}",
       email: "pbuser#{i}@example.com",
@@ -39,7 +38,7 @@ defmodule Client do
     |> case do
       {:ok, %Req.Response{} = resp} ->
         try do
-          Mcsv.UserResponse.decode(resp.body)
+          Mcsv.V2.UserResponse.decode(resp.body)
         catch
           :error,
           %Protobuf.DecodeError{
@@ -90,7 +89,7 @@ defmodule Client do
         OpenTelemetry.Ctx.attach(ctx)
 
         # Build and send each user request
-        %Mcsv.UserRequest{
+        %Mcsv.V2.UserRequest{
           id: "#{i}",
           name: "StreamUser #{i}",
           email: "streamuser#{i}@example.com",
@@ -121,8 +120,8 @@ defmodule Client do
 
   @spec post(map(), binary(), binary()) ::
           {:ok, Req.Response.t()} | {:error, any()}
-  defp post(%Mcsv.UserRequest{} = user, base, uri) do
-    binary = Mcsv.UserRequest.encode(user)
+  defp post(%Mcsv.V2.UserRequest{} = user, base, uri) do
+    binary = Mcsv.V2.UserRequest.encode(user)
 
     Req.new(base_url: base)
     |> OpentelemetryReq.attach(propagate_trace_headers: true)

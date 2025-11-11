@@ -42,7 +42,7 @@ defmodule ImageClient do
   ## Examples
 
       iex> ImageClient.convert_png("test.png", "user@example.com")
-      %Mcsv.UserResponse{ok: true, message: "Image conversion job enqueued..."}
+      %Mcsv.V2.UserResponse{ok: true, message: "Image conversion job enqueued..."}
   """
   def convert_png(png_path, user_email, opts \\ []) do
     # Create a root span for this client-initiated operation
@@ -57,7 +57,7 @@ defmodule ImageClient do
 
       # Build protobuf request
       request_binary =
-        %Mcsv.ImageConversionRequest{
+        %Mcsv.V2.ImageConversionRequest{
           user_id: "test-user-#{:rand.uniform(1000)}",
           user_email: user_email,
           image_data: png_binary,
@@ -67,7 +67,7 @@ defmodule ImageClient do
           max_width: Keyword.get(opts, :max_width, 0),
           max_height: Keyword.get(opts, :max_height, 0)
         }
-        |> Mcsv.ImageConversionRequest.encode()
+        |> Mcsv.V2.ImageConversionRequest.encode()
 
       Logger.info("Sending to User service...: #{format_bytes(png_size)}")
 
@@ -81,7 +81,7 @@ defmodule ImageClient do
           headers: [{"content-type", "application/protobuf"}]
         )
 
-      result = Mcsv.UserResponse.decode(response.body)
+      result = Mcsv.V2.UserResponse.decode(response.body)
       Tracer.set_attribute("response.ok", result.ok)
       result
     end
@@ -119,7 +119,7 @@ defmodule ImageClient do
         timeout: 60_000
       )
       |> Enum.reduce({0, 0}, fn
-        {:ok, %Mcsv.UserResponse{ok: true}}, {success, failed} ->
+        {:ok, %Mcsv.V2.UserResponse{ok: true}}, {success, failed} ->
           {success + 1, failed}
 
         _, {success, failed} ->

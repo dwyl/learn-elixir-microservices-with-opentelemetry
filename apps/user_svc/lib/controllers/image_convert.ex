@@ -17,7 +17,7 @@ defmodule ConvertImageController do
   alias Clients.JobSvcClient
 
   def convert(conn, _) do
-    with {:ok, %Mcsv.ImageConversionRequest{} = request, new_conn} <-
+    with {:ok, %Mcsv.V2.ImageConversionRequest{} = request, new_conn} <-
            decode_client_request(conn),
          {:ok, storage_id} <-
            store_image(request),
@@ -48,7 +48,7 @@ defmodule ConvertImageController do
   defp decode_client_request(conn) do
     case read_body(conn) do
       {:ok, binary_body, new_conn} ->
-        {:ok, Mcsv.ImageConversionRequest.decode(binary_body), new_conn}
+        {:ok, Mcsv.V2.ImageConversionRequest.decode(binary_body), new_conn}
 
       {:error, reason} ->
         {:error, reason}
@@ -79,7 +79,7 @@ defmodule ConvertImageController do
     Logger.info("[User][ConvertImageController] Image URL: #{image_url}")
 
     # Create request with image_url (no binary data)
-    job_request = %Mcsv.ImageConversionRequest{
+    job_request = %Mcsv.V2.ImageConversionRequest{
       user_id: request.user_id,
       user_email: request.user_email,
       image_url: image_url,

@@ -8,9 +8,9 @@ defmodule EmailSenderController do
 
     # # Decode protobuf and pattern match!
     email_params =
-      Mcsv.UserRequest.decode(binary_body)
+      Mcsv.V2.UserRequest.decode(binary_body)
 
-    %Mcsv.UserRequest{type: type, email: email} = email_params
+    %Mcsv.V2.UserRequest{type: type, email: email} = email_params
 
     case injob_email(email_params) do
       {:ok, %Oban.Job{} = _oban_job_id} ->
@@ -45,11 +45,11 @@ defmodule EmailSenderController do
 
   @spec encode_binary_message(String.t(), boolean()) :: binary()
   def encode_binary_message(message, bool) do
-    %Mcsv.UserResponse{
+    %Mcsv.V2.UserResponse{
       message: message,
       ok: bool
     }
-    |> Mcsv.UserResponse.encode()
+    |> Mcsv.V2.UserResponse.encode()
   end
 
   @spec injob_email(map()) :: {:ok, Oban.Job.t()} | {:error, any()}

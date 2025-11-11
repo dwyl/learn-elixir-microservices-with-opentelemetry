@@ -4,5 +4,4 @@ import Config
 # Most runtime config is in runtime.exs (using environment variables)
 
 # Compile-time Phoenix endpoint configuration
-config :job_svc, JobServiceWeb.Endpoint,
-  code_reloader: false
+config :job_svc, JobServiceWeb.Endpoint, code_reloader: false

@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package mcsv;
+package mcsv.v1;
 
 message ImageConvertedNotification {
   string user_email = 1;

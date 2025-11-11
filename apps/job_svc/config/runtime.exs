@@ -9,7 +9,8 @@ config :job_svc, JobServiceWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,
   url: [host: "localhost"],
   http: [
-    ip: {0, 0, 0, 0},  # Bind to all interfaces for Docker networking
+    # Bind to all interfaces for Docker networking
+    ip: {0, 0, 0, 0},
     port: port
   ],
   server: true,

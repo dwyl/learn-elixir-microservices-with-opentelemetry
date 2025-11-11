@@ -11,11 +11,13 @@ defmodule Protos.MixProject do
       deps: deps(),
       # Proto compiler config
       proto_compiler: [
-        source_dir: "proto_defs",
-        output_dir: "lib/protos"
+        source_dir: "proto_defs/#{protos_version()}",
+        output_dir: "lib/protos/#{protos_version()}"
       ]
     ]
   end
+
+  defp protos_version, do: "V2"
 
   # Run "mix help compile.app" to learn about applications.
   def application do

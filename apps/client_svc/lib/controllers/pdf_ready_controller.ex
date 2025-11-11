@@ -29,7 +29,7 @@ defmodule PdfReadyController do
     with {:ok, binary_body, conn} <-
            read_body(conn),
          {:ok,
-          %Mcsv.PdfReadyNotification{
+          %Mcsv.V2.PdfReadyNotification{
             user_email: user_email,
             presigned_url: presigned_url,
             size: size,
@@ -56,7 +56,7 @@ defmodule PdfReadyController do
   ## Parameters
     - binary_body: The raw binary body from the HTTP request.
   ## Returns
-    - {:ok, %Mcsv.PdfReadyNotification{}} on success
+    - {:ok, %Mcsv.V2.PdfReadyNotification{}} on success
     - {:error, :decode_error} on failure
 
       iex> DeliveryController.maybe_decode_email_request(1)
@@ -66,8 +66,8 @@ defmodule PdfReadyController do
 
   def maybe_decode_request(binary_body) do
     try do
-      %Mcsv.PdfReadyNotification{} =
-        resp = Mcsv.PdfReadyNotification.decode(binary_body)
+      %Mcsv.V2.PdfReadyNotification{} =
+        resp = Mcsv.V2.PdfReadyNotification.decode(binary_body)
 
       {:ok, resp}
     catch

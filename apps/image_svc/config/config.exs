@@ -1,19 +1,6 @@
 import Config
 
-# NOTE: Runtime configuration (ports, URLs, credentials) is in config/runtime.exs
 # This file only contains compile-time configuration
-
-config :exqlite,
-  force_build: true,
-  default_chunk_size: 100
-
-config :image_svc,
-  ecto_repos: [ImageService.Repo],
-  adapter: Ecto.Adapters.SQLite3,
-  default_transaction_mode: :immediate,
-  show_sensitive_data_on_connection_error: true,
-  stacktrace: true,
-  pool_size: 5
 
 # PromEx configuration for Prometheus metrics--------------------------
 config :image_svc, ImageService.PromEx,

@@ -30,7 +30,7 @@ defmodule ImageSvc.ResponseBuilder do
         original_storage_id,
         user_email
       ) do
-    %Mcsv.ImageConversionResponse{
+    %Mcsv.V2.ImageConversionResponse{
       success: true,
       message: "Conversion completed",
       pdf_data: <<>>,
@@ -43,7 +43,7 @@ defmodule ImageSvc.ResponseBuilder do
       pdf_url: pdf_url,
       user_email: user_email
     }
-    |> Mcsv.ImageConversionResponse.encode()
+    |> Mcsv.V2.ImageConversionResponse.encode()
   end
 
   @doc """
@@ -56,7 +56,7 @@ defmodule ImageSvc.ResponseBuilder do
   Encoded ImageConversionResponse binary
   """
   def build_failure_response(reason) do
-    %Mcsv.ImageConversionResponse{
+    %Mcsv.V2.ImageConversionResponse{
       success: false,
       message: "Conversion failed: #{reason}",
       pdf_data: <<>>,
@@ -65,6 +65,6 @@ defmodule ImageSvc.ResponseBuilder do
       width: 0,
       height: 0
     }
-    |> Mcsv.ImageConversionResponse.encode()
+    |> Mcsv.V2.ImageConversionResponse.encode()
   end
 end

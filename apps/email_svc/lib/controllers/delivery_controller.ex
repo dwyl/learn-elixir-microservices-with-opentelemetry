@@ -15,7 +15,7 @@ defmodule DeliveryController do
     with {:ok, binary_body, new_conn} <-
            Plug.Conn.read_body(conn),
          {:ok,
-          %Mcsv.EmailRequest{
+          %Mcsv.V2.EmailRequest{
             user_name: name,
             user_email: email,
             email_type: type
@@ -43,7 +43,7 @@ defmodule DeliveryController do
   ## Parameters
     - binary_body: The raw binary body from the HTTP request.
   ## Returns
-    - {:ok, %Mcsv.EmailRequest{}} on success
+    - {:ok, %Mcsv.V2.EmailRequest{}} on success
     - {:error, :decode_error} on failure
 
       iex> DeliveryController.maybe_decode_email_request(1)
@@ -53,7 +53,7 @@ defmodule DeliveryController do
 
   def maybe_decode_email_request(binary_body) do
     try do
-      %Mcsv.EmailRequest{} = resp = Mcsv.EmailRequest.decode(binary_body)
+      %Mcsv.V2.EmailRequest{} = resp = Mcsv.V2.EmailRequest.decode(binary_body)
       {:ok, resp}
     catch
       :error, reason ->
@@ -65,7 +65,7 @@ defmodule DeliveryController do
   defp deliver_and_confirm(conn, type, email, name) do
     case type do
       "welcome" ->
-        EmailService.Emails.UserEmail.welcome_email(email, name)
+        Emails.UserEmail.welcome_email(email, name)
         |> EmailService.Mailer.deliver()
 
       "notification" ->
@@ -81,11 +81,11 @@ defmodule DeliveryController do
     Logger.info("[Email][DeliveryController]: New email sent to #{email}")
 
     response_binary =
-      %Mcsv.EmailResponse{
+      %Mcsv.V2.EmailResponse{
         success: true,
         message: "[Email][DeliveryController] New email sent to #{email}"
       }
-      |> Mcsv.EmailResponse.encode()
+      |> Mcsv.V2.EmailResponse.encode()
 
     conn
     |> put_resp_content_type("application/protobuf")

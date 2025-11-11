@@ -10,7 +10,8 @@ config :client_svc, ClientServiceWeb.Endpoint,
   url: [host: "localhost"],
   adapter: Bandit.PhoenixAdapter,
   http: [
-    ip: {0, 0, 0, 0},  # Bind to all interfaces for Docker networking
+    # Bind to all interfaces for Docker networking
+    ip: {0, 0, 0, 0},
     port: port
   ],
   server: true,
@@ -23,7 +24,7 @@ config :client_svc,
   user_svc_base_url:
     System.get_env("USER_SVC_URL", "http://127.0.0.1:#{System.get_env("USER_SVC_PORT", "8081")}"),
   user_endpoints: %{
-    create: "/user_svc/create_user/v1",
+    create: "/user_svc/create_email/v1",
     convert_image: "/user_svc/convert_image/v1"
   }
 

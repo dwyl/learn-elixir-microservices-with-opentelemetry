@@ -15,7 +15,8 @@ defmodule ImageSvc.MetadataCache do
   require Logger
 
   @table_name :image_metadata_cache
-  @ttl_seconds 3600  # 1 hour TTL
+  # 1 hour TTL
+  @ttl_seconds 3600
 
   ## Client API
 
@@ -78,12 +79,18 @@ defmodule ImageSvc.MetadataCache do
   def init(:ok) do
     # Create ETS table with optimized settings
     :ets.new(@table_name, [
-      :set,                    # Key-value store
-      :public,                 # Any process can read/write
-      :named_table,            # Access by name
-      read_concurrency: true,  # Optimize for concurrent reads
-      write_concurrency: true, # Optimize for concurrent writes
-      decentralized_counters: true  # Better concurrency on multi-core
+      # Key-value store
+      :set,
+      # Any process can read/write
+      :public,
+      # Access by name
+      :named_table,
+      # Optimize for concurrent reads
+      read_concurrency: true,
+      # Optimize for concurrent writes
+      write_concurrency: true,
+      # Better concurrency on multi-core
+      decentralized_counters: true
     ])
 
     Logger.info("[MetadataCache] ETS table created: #{@table_name}")
@@ -99,9 +106,10 @@ defmodule ImageSvc.MetadataCache do
     now = System.os_time(:second)
 
     # Delete expired entries
-    deleted = :ets.select_delete(@table_name, [
-      {{:_, :_, :"$1"}, [{:<, :"$1", now}], [true]}
-    ])
+    deleted =
+      :ets.select_delete(@table_name, [
+        {{:_, :_, :"$1"}, [{:<, :"$1", now}], [true]}
+      ])
 
     if deleted > 0 do
       Logger.debug("[MetadataCache] Cleaned up #{deleted} expired entries")

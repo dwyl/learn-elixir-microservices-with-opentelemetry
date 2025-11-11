@@ -6,20 +6,13 @@ config :image_svc, ImageSvcWeb.Endpoint,
   adapter: Bandit.PhoenixAdapter,
   url: [host: "localhost"],
   http: [
-    ip: {0, 0, 0, 0},  # Bind to all interfaces for Docker networking
+    # Bind to all interfaces for Docker networking
+    ip: {0, 0, 0, 0},
     port: port
   ],
   server: true,
   check_origin: false,
   secret_key_base: "lSELLkV2qXzO3PbrZjubtnS84cvDgItzZ3cuQMlmRrM/f5Iy0YHJgn/900qLm7/a"
-
-# Database configuration (SQLite)------------------------
-# In Docker: /app/db/service.db
-# In dev: db/service.db
-
-config :image_svc, ImageService.Repo,
-  database: System.get_env("DATABASE_PATH", "db/conversion_cache.sql3"),
-  pool_size: String.to_integer(System.get_env("DB_POOL_SIZE", "5"))
 
 config :image_svc,
   port: port,

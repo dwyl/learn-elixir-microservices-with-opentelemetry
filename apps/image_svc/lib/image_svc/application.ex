@@ -16,24 +16,11 @@ defmodule ImageService.Application do
   def start(_type, _args) do
     ImageMagick.check()
 
-    ImageService.Release.migrate()
-    OpentelemetryEcto.setup([:image_svc, :ecto_repos])
-    # OpenTelemetry.register_application_tracer(:image_svc)
-    # OpentelemetryLoggerMetadata.setup()
-
-    port = Application.get_env(:image_svc, :port, 8084)
-    Logger.info("Starting IMAGE SERVICE on port #{port}")
-
     children = [
       # OpenTelemetry auto-instrumentation (must be first)
       ImageSvcWeb.Telemetry,
       # PromEx must start before Repo to capture Ecto init events
       ImageService.PromEx,
-      # ETS metadata cache (must start before endpoint)
-      # ImageSvc.MetadataCache,
-      ImageService.Repo,
-      # SQLite conversion cache with persistent connection
-      # ImageSvc.ConversionCacheServer,
       ImageSvcWeb.Endpoint
     ]
 

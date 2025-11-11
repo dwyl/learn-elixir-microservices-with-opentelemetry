@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package mcsv;
+package mcsv.v1;
 
 // Go package path (required for OpenAPI generation)
 option go_package = "github.com/msvc/protos";

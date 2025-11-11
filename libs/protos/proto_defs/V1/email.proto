@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package mcsv;
+package mcsv.v1;
 
 message EmailRequest {
   string user_id = 1;

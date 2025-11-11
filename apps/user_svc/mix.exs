@@ -12,7 +12,8 @@ defmodule UserSvc.MixProject do
       elixir: "~> 1.19",
       start_permanent: Mix.env() == :prod,
       deps: deps(),
-      releases: releases()
+      releases: releases(),
+      aliases: aliases()
     ]
   end
 
@@ -37,6 +38,17 @@ defmodule UserSvc.MixProject do
         #   inline_size: 100
         # ]
       ]
+    ]
+  end
+
+  defp aliases do
+    [
+      "protos.refresh": [
+        "deps.clean protos --build",
+        "deps.get",
+        "compile --force"
+      ],
+      refresh: ["format", "protos.refresh", "dialyzer", "credo"]
     ]
   end
 

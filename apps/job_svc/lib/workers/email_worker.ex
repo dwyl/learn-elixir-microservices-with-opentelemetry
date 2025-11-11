@@ -10,7 +10,7 @@ defmodule JobService.Workers.EmailWorker do
 
   use Oban.Worker,
     queue: :emails,
-    max_attempts: 3,
+    max_attempts: 2,
     priority: 1
 
   require Logger

@@ -25,7 +25,7 @@ config :job_svc, Oban,
   repo: JobService.Repo,
   engine: Oban.Engines.Lite,
   # Changed from :debug to reduce log memory
-  log: :info,
+  # log: :info,
   queues: [
     # Reduced from 10 (most jobs are just HTTP calls)
     default: 2,

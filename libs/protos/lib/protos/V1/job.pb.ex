@@ -1,4 +1,4 @@
-defmodule Mcsv.EnqueueJobRequest.ArgsEntry do
+defmodule Mcsv.V1.EnqueueJobRequest.ArgsEntry do
   @moduledoc false
 
   use Protobuf, map: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -7,7 +7,7 @@ defmodule Mcsv.EnqueueJobRequest.ArgsEntry do
   field :value, 2, type: :string
 end
 
-defmodule Mcsv.EnqueueJobRequest do
+defmodule Mcsv.V1.EnqueueJobRequest do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -16,14 +16,14 @@ defmodule Mcsv.EnqueueJobRequest do
 
   field :worker, 1, type: :string
   field :queue, 2, type: :string
-  field :args, 3, repeated: true, type: Mcsv.EnqueueJobRequest.ArgsEntry, map: true
+  field :args, 3, repeated: true, type: Mcsv.V1.EnqueueJobRequest.ArgsEntry, map: true
   field :priority, 4, type: :int32
   field :max_attempts, 5, type: :int32, json_name: "maxAttempts"
   field :scheduled_at, 6, type: :int64, json_name: "scheduledAt", oneof: 0
   field :schedule_in, 7, type: :int32, json_name: "scheduleIn", oneof: 0
 end
 
-defmodule Mcsv.EnqueueJobResponse do
+defmodule Mcsv.V1.EnqueueJobResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -35,7 +35,7 @@ defmodule Mcsv.EnqueueJobResponse do
   field :error, 5, type: :string
 end
 
-defmodule Mcsv.GetJobStatusRequest do
+defmodule Mcsv.V1.GetJobStatusRequest do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -43,7 +43,7 @@ defmodule Mcsv.GetJobStatusRequest do
   field :job_id, 1, type: :int64, json_name: "jobId"
 end
 
-defmodule Mcsv.JobStatusResponse.ArgsEntry do
+defmodule Mcsv.V1.JobStatusResponse.ArgsEntry do
   @moduledoc false
 
   use Protobuf, map: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -52,7 +52,7 @@ defmodule Mcsv.JobStatusResponse.ArgsEntry do
   field :value, 2, type: :string
 end
 
-defmodule Mcsv.JobStatusResponse do
+defmodule Mcsv.V1.JobStatusResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -61,7 +61,7 @@ defmodule Mcsv.JobStatusResponse do
   field :worker, 2, type: :string
   field :queue, 3, type: :string
   field :state, 4, type: :string
-  field :args, 5, repeated: true, type: Mcsv.JobStatusResponse.ArgsEntry, map: true
+  field :args, 5, repeated: true, type: Mcsv.V1.JobStatusResponse.ArgsEntry, map: true
   field :attempt, 6, type: :int32
   field :max_attempts, 7, type: :int32, json_name: "maxAttempts"
   field :attempted_at, 8, type: :int64, json_name: "attemptedAt"
@@ -72,7 +72,7 @@ defmodule Mcsv.JobStatusResponse do
   field :completed_at, 13, type: :int64, json_name: "completedAt"
 end
 
-defmodule Mcsv.ListJobsRequest do
+defmodule Mcsv.V1.ListJobsRequest do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -83,7 +83,7 @@ defmodule Mcsv.ListJobsRequest do
   field :limit, 4, type: :int32
 end
 
-defmodule Mcsv.CancelJobRequest do
+defmodule Mcsv.V1.CancelJobRequest do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -91,7 +91,7 @@ defmodule Mcsv.CancelJobRequest do
   field :job_id, 1, type: :int64, json_name: "jobId"
 end
 
-defmodule Mcsv.CancelJobResponse do
+defmodule Mcsv.V1.CancelJobResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -100,7 +100,7 @@ defmodule Mcsv.CancelJobResponse do
   field :message, 2, type: :string
 end
 
-defmodule Mcsv.RetryJobRequest do
+defmodule Mcsv.V1.RetryJobRequest do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -108,7 +108,7 @@ defmodule Mcsv.RetryJobRequest do
   field :job_id, 1, type: :int64, json_name: "jobId"
 end
 
-defmodule Mcsv.RetryJobResponse do
+defmodule Mcsv.V1.RetryJobResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -118,7 +118,7 @@ defmodule Mcsv.RetryJobResponse do
   field :scheduled_at, 3, type: :int64, json_name: "scheduledAt"
 end
 
-defmodule Mcsv.GetQueueStatsRequest do
+defmodule Mcsv.V1.GetQueueStatsRequest do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -126,7 +126,7 @@ defmodule Mcsv.GetQueueStatsRequest do
   field :queue, 1, type: :string
 end
 
-defmodule Mcsv.GetQueueStatsResponse.QueueStats do
+defmodule Mcsv.V1.GetQueueStatsResponse.QueueStats do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -140,10 +140,10 @@ defmodule Mcsv.GetQueueStatsResponse.QueueStats do
   field :discarded, 7, type: :int32
 end
 
-defmodule Mcsv.GetQueueStatsResponse do
+defmodule Mcsv.V1.GetQueueStatsResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
 
-  field :stats, 1, repeated: true, type: Mcsv.GetQueueStatsResponse.QueueStats
+  field :stats, 1, repeated: true, type: Mcsv.V1.GetQueueStatsResponse.QueueStats
 end

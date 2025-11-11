@@ -1,4 +1,4 @@
-defmodule Mcsv.EmailType do
+defmodule Mcsv.V1.EmailType do
   @moduledoc false
 
   use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -8,7 +8,7 @@ defmodule Mcsv.EmailType do
   field :EMAIL_TYPE_NOTIFICATION, 2
 end
 
-defmodule Mcsv.UserRequest do
+defmodule Mcsv.V1.UserRequest do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -16,10 +16,10 @@ defmodule Mcsv.UserRequest do
   field :id, 1, type: :string
   field :name, 2, type: :string
   field :email, 3, type: :string
-  field :type, 4, type: Mcsv.EmailType, enum: true
+  field :type, 4, type: Mcsv.V1.EmailType, enum: true
 end
 
-defmodule Mcsv.UserResponse do
+defmodule Mcsv.V1.UserResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -28,7 +28,7 @@ defmodule Mcsv.UserResponse do
   field :message, 2, type: :string
 end
 
-defmodule Mcsv.StoreImageRequest do
+defmodule Mcsv.V1.StoreImageRequest do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -40,7 +40,7 @@ defmodule Mcsv.StoreImageRequest do
   field :user_email, 5, type: :string, json_name: "userEmail"
 end
 
-defmodule Mcsv.StoreImageResponse do
+defmodule Mcsv.V1.StoreImageResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -52,7 +52,7 @@ defmodule Mcsv.StoreImageResponse do
   field :size, 5, type: :int64
 end
 
-defmodule Mcsv.PdfReadyNotification do
+defmodule Mcsv.V1.PdfReadyNotification do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -64,7 +64,7 @@ defmodule Mcsv.PdfReadyNotification do
   field :message, 5, type: :string
 end
 
-defmodule Mcsv.PdfReadyResponse do
+defmodule Mcsv.V1.PdfReadyResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -73,7 +73,7 @@ defmodule Mcsv.PdfReadyResponse do
   field :message, 2, type: :string
 end
 
-defmodule Mcsv.NotifyImageConvertedResponse do
+defmodule Mcsv.V1.NotifyImageConvertedResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3

@@ -21,7 +21,7 @@ defmodule ImageSvc.UserSvcClient do
   - `user_email`: User email for notifications
 
   ## Returns
-  - `{:ok, %Mcsv.StoreImageResponse{}}` on success
+  - `{:ok, %Mcsv.V2.StoreImageResponse{}}` on success
   - `{:error, reason}` on failure
   """
   def store_pdf(pdf_binary, user_id, original_storage_id, user_email) do
@@ -30,18 +30,18 @@ defmodule ImageSvc.UserSvcClient do
     )
 
     request_binary =
-      %Mcsv.StoreImageRequest{
+      %Mcsv.V2.StoreImageRequest{
         image_data: pdf_binary,
         user_id: user_id,
         format: "pdf",
         original_storage_id: original_storage_id,
         user_email: user_email
       }
-      |> Mcsv.StoreImageRequest.encode()
+      |> Mcsv.V2.StoreImageRequest.encode()
 
     case post(user_base_url(), endpoints().store_image, request_binary) do
       {:ok, %Req.Response{status: 200, body: body}} ->
-        {:ok, Mcsv.StoreImageResponse.decode(body)}
+        {:ok, Mcsv.V2.StoreImageResponse.decode(body)}
 
       {:ok, %Req.Response{status: status}} ->
         {:error, "[Image] HTTP #{status}"}

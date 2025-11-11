@@ -1,6 +1,6 @@
 syntax = "proto3";
 
-package mcsv;
+package mcsv.v2;
 
 
 // Enqueue a job

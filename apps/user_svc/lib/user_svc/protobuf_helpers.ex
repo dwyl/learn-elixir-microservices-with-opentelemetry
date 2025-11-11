@@ -9,49 +9,49 @@ defmodule ProtobufHelpers do
   Builds a StoreImageResponse for successful storage.
   """
   def build_store_success(format, storage_id, presigned_url, size) do
-    %Mcsv.StoreImageResponse{
+    %Mcsv.V2.StoreImageResponse{
       success: true,
       message: "[User] #{format} stored successfully",
       storage_id: storage_id,
       presigned_url: presigned_url,
       size: size
     }
-    |> Mcsv.StoreImageResponse.encode()
+    |> Mcsv.V2.StoreImageResponse.encode()
   end
 
   @doc """
   Builds a StoreImageResponse for storage failure.
   """
   def build_store_failure(reason) do
-    %Mcsv.StoreImageResponse{
+    %Mcsv.V2.StoreImageResponse{
       success: false,
       message: "[User] Storage failed: #{inspect(reason)}",
       storage_id: "",
       presigned_url: "",
       size: 0
     }
-    |> Mcsv.StoreImageResponse.encode()
+    |> Mcsv.V2.StoreImageResponse.encode()
   end
 
   @doc """
   Builds a UserResponse for successful operations.
   """
   def build_user_success(message) do
-    %Mcsv.UserResponse{
+    %Mcsv.V2.UserResponse{
       ok: true,
       message: message
     }
-    |> Mcsv.UserResponse.encode()
+    |> Mcsv.V2.UserResponse.encode()
   end
 
   @doc """
   Builds a UserResponse for failed operations.
   """
   def build_user_failure(message) do
-    %Mcsv.UserResponse{
+    %Mcsv.V2.UserResponse{
       ok: false,
       message: message
     }
-    |> Mcsv.UserResponse.encode()
+    |> Mcsv.V2.UserResponse.encode()
   end
 end

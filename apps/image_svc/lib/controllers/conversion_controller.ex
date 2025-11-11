@@ -40,8 +40,6 @@ defmodule ConversionController do
     2. Converts to PDF using ImageMagick (multi-threaded)
     3. Stores PDF in MinIO via user_svc
     4. Returns acknowledgment with image metadata
-
-    **Note:** Client notification is handled automatically by user_svc after storage.
     """,
     request_body:
       {"Image conversion request", "application/x-protobuf", ImageConversionRequestSchema},
@@ -104,7 +102,7 @@ defmodule ConversionController do
   ## Parameters
     - binary_body: The raw binary body from the HTTP request.
   ## Returns
-    - {:ok, %Mcsv.PdfReadyNotification{}} on success
+    - {:ok, %Mcsv.V2.PdfReadyNotification{}} on success
     - {:error, :decode_error} on failure
 
       iex> DeliveryController.maybe_decode_email_request(1)
@@ -114,7 +112,9 @@ defmodule ConversionController do
 
   def maybe_decode_request(binary_body) do
     try do
-      %Mcsv.ImageConversionRequest{} = resp = Mcsv.ImageConversionRequest.decode(binary_body)
+      %Mcsv.V2.ImageConversionRequest{} =
+        resp = Mcsv.V2.ImageConversionRequest.decode(binary_body)
+
       {:ok, resp}
     catch
       :error, reason ->
@@ -187,20 +187,18 @@ defmodule ConversionController do
     with {:ok, pdf_binary} <-
            ImageSvc.ParallelConverterStream.convert_to_pdf(image_binary, opts),
          {:ok, %{bucket: bucket, key: key, size: size}} <-
-           upload_binary_to_s3(pdf_binary, bucket(), request.input_format) do
+           upload_binary_to_s3(pdf_binary, bucket()) do
       # Note: Client is no more notified. Return data to job_svc.
       Logger.info("[Image][ConversionController] Conversion complete: #{bucket}/#{key}")
 
       {:ok, bucket, key, size}
     else
-      error ->
-        # Error is already in the correct format from helper functions
-        dbg(error)
-        error
+      _ ->
+        {:error, :conversion_failed}
     end
   end
 
-  defp upload_binary_to_s3(pdf_binary, bucket, format) do
+  defp upload_binary_to_s3(pdf_binary, bucket) do
     key = generate_storage_id()
     # Upload to S3
     ExAws.S3.put_object(bucket, key, pdf_binary, content_type: "application/pdf")

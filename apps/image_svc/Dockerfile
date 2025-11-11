@@ -80,7 +80,7 @@ WORKDIR /app
 COPY --from=builder --chown=appuser:appuser /app/apps/image_svc/_build/prod/rel/image_svc ./
 
 # Create database directory with proper permissions (must be before USER switch)
-RUN mkdir -p db && chown -R appuser:appuser db
+# RUN mkdir -p db && chown -R appuser:appuser db
 
 # Switch to non-root user
 USER appuser

@@ -1,10 +1,10 @@
-defmodule CreateUserController do
+defmodule CreateEmailController do
   @moduledoc """
-  Handles user creation and triggers welcome email.
+  Handles email creation
 
   Flow:
-  1. Receives user creation request
-  2. Enqueues welcome email job via job_svc
+  1. Receives email/user creation request
+  2. Enqueues email job via job_svc
   3. Returns acknowledgment to client
   """
 

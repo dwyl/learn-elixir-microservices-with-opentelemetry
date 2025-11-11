@@ -20,10 +20,10 @@ defmodule Clients.JobSvcClient do
   - `{:ok, message}` on success
   - `{:error, reason}` on failure
   """
-  @spec convert_image(Mcsv.ImageConversionRequest.t()) ::
+  @spec convert_image(Mcsv.V2.ImageConversionRequest.t()) ::
           {:ok, binary()} | {:error, any()}
-  def convert_image(%Mcsv.ImageConversionRequest{} = request) do
-    request_binary = Mcsv.ImageConversionRequest.encode(request)
+  def convert_image(%Mcsv.V2.ImageConversionRequest{} = request) do
+    request_binary = Mcsv.V2.ImageConversionRequest.encode(request)
 
     Logger.info(
       "[User][JobSvcClient] Requesting image conversion (#{byte_size(request_binary)} bytes with image_url)"

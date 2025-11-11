@@ -1,4 +1,4 @@
-defmodule Mcsv.ImageConversionRequest do
+defmodule Mcsv.V2.ImageConversionRequest do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -15,7 +15,7 @@ defmodule Mcsv.ImageConversionRequest do
   field :storage_id, 10, type: :string, json_name: "storageId"
 end
 
-defmodule Mcsv.ImageConversionResponse do
+defmodule Mcsv.V2.ImageConversionResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3

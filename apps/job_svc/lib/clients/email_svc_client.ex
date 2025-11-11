@@ -14,26 +14,18 @@ defmodule JobService.Clients.EmailSvcClient do
 
   @doc """
   Sends an email request to email_svc.
-
-  ## Parameters
-  - `args`: Map with user info (id, name, email, type)
-
-  ## Returns
-  - `:ok` on success
-  - `{:error, reason}` on failure
   """
+
   @spec send_email(map()) :: :ok | {:error, any()}
   def send_email(args) do
-    request = %Mcsv.EmailRequest{
+    request = %Mcsv.V2.EmailRequest{
       user_id: args["id"],
       user_name: args["name"],
       user_email: args["email"],
       email_type: args["type"]
     }
 
-    request_binary = Mcsv.EmailRequest.encode(request)
-
-    # Logger.info("[EmailSvcClient] Sending #{args["type"]} email to #{args["email"]}")
+    request_binary = Mcsv.V2.EmailRequest.encode(request)
 
     case post(base_email_url(), email_svc_endpoint().send_email, request_binary) do
       {:ok, %{status: 200, body: response_binary}} ->
@@ -43,12 +35,12 @@ defmodule JobService.Clients.EmailSvcClient do
 
       {:ok, %{status: status}} ->
         Logger.error("[Job][EmailSvcClient] HTTP #{status}")
-        notify_user_svc_failure()
+        notify_user_svc_failure(request)
         {:error, "[Job] HTTP #{status}"}
 
       {:error, reason} ->
         Logger.error("[Job][EmailSvcClient] Request failed: #{inspect(reason)}")
-        notify_user_svc_failure()
+        notify_user_svc_failure(request)
         {:error, reason}
     end
   end
@@ -57,20 +49,19 @@ defmodule JobService.Clients.EmailSvcClient do
 
   @spec notify_user_svc(binary()) :: :ok | {:error, any()}
   defp notify_user_svc(response_body) do
-    # Post directly to user_svc (no intermediate hop through job_svc)
     Logger.info("[Job][EmailSvcClient] Notifying user_svc of email delivery")
     post(base_user_url(), user_svc_endpoints().notify_email_sent, response_body)
   end
 
-  defp notify_user_svc_failure do
+  defp notify_user_svc_failure(request) do
     failure_response =
-      %Mcsv.EmailResponse{
-        user_id: "",
-        email: "",
+      %Mcsv.V2.EmailResponse{
+        user_id: request.user_id,
+        user_email: request.user_email,
         message: "[Job] Failed to send email",
         success: false
       }
-      |> Mcsv.EmailResponse.encode()
+      |> Mcsv.V2.EmailResponse.encode()
 
     post(base_user_url(), user_svc_endpoints().notify_email_sent, failure_response)
   end

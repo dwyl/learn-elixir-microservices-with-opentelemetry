@@ -23,14 +23,14 @@ defmodule Clients.ClientSvcClient do
   - `:ok` on success
   - `{:error, reason}` on failure
   """
-  def notify_image_converted(%Mcsv.ImageConversionResponse{} = response) do
+  def notify_image_converted(%Mcsv.V2.ImageConversionResponse{} = response) do
     Logger.info(
       "[User][ClientSvcClient] Notifying client about PDF ready for storage_id=#{response.storage_id}"
     )
 
     # Transform ImageConversionResponse -> PdfReadyNotification
     notification =
-      %Mcsv.PdfReadyNotification{
+      %Mcsv.V2.PdfReadyNotification{
         user_email: response.user_email,
         storage_id: response.storage_id,
         presigned_url: response.pdf_url,
@@ -39,7 +39,7 @@ defmodule Clients.ClientSvcClient do
         message:
           "Your PDF is ready! Size: #{response.width}x#{response.height}, #{format_size(response.output_size)}"
       }
-      |> Mcsv.PdfReadyNotification.encode()
+      |> Mcsv.V2.PdfReadyNotification.encode()
 
     case post(client_svc_base_url(), client_svc_endpoints().pdf_ready, notification) do
       {:ok, %{status: 204}} ->

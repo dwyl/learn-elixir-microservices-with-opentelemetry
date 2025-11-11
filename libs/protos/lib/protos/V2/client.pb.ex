@@ -1,4 +1,4 @@
-defmodule Mcsv.ImageConvertedNotification do
+defmodule Mcsv.V2.ImageConvertedNotification do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -15,7 +15,7 @@ defmodule Mcsv.ImageConvertedNotification do
   field :pdf_url, 10, type: :string, json_name: "pdfUrl"
 end
 
-defmodule Mcsv.ImageConvertedResponse do
+defmodule Mcsv.V2.ImageConvertedResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
