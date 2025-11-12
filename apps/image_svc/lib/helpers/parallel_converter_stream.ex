@@ -69,7 +69,9 @@ defmodule ImageSvc.ParallelConverterStream do
         # Stream without stderr capture first - simpler
         pdf_binary =
           ExCmd.stream!(full_cmd, input: input_stream)
-          |> Enum.reduce(<<>>, fn chunk, acc -> acc <> chunk end)
+          # |> Enum.reduce(<<>>, fn chunk, acc -> acc <> chunk end)
+          |> Enum.reduce(<<>>, fn chunk, acc -> [acc | chunk] end)
+          |> IO.iodata_to_binary()
 
         duration = System.monotonic_time(:millisecond) - start_time
 
@@ -151,7 +153,7 @@ defmodule ImageSvc.ParallelConverterStream do
       "-quality",
       "85",
       "-density",
-      "150"
+      "100"
     ]
   end
 
@@ -160,7 +162,7 @@ defmodule ImageSvc.ParallelConverterStream do
       "-quality",
       "95",
       "-density",
-      "300"
+      "200"
     ]
   end
 

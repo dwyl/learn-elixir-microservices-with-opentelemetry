@@ -289,7 +289,7 @@ services:
       - ${TEMPO_OTLP_HTTP_PORT:-4318}:4318 # OTLP HTTP receiver (fallback)
     command: -config.file=/etc/tempo/tempo.yml
     volumes:
-      - ./configs/tempo/tempo.yml:/etc/tempo/tempo.yml
+      - ./o11y_configs/tempo/tempo.yml:/etc/tempo/tempo.yml
     tmpfs:
       - /tmp/tempo:mode=1777,size=1G # Temporary storage for WAL and cache (writable by all users)
     environment:
@@ -324,7 +324,7 @@ services:
     ports:
       - ${PROMETHEUS_UI_PORT}:9090 # Prometheus UI and API
     volumes:
-      - ./configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./o11y_configs/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus-data:/prometheus
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
@@ -351,7 +351,7 @@ services:
       - ${LOKI_PORT}:3100 # Loki API
     command: -config.file=/etc/loki/config.yml
     volumes:
-      - ./configs/loki/config.yml:/etc/loki/config.yml # Mount custom config with MinIO
+      - ./o11y_configs/loki/config.yml:/etc/loki/config.yml # Mount custom config with MinIO
       - loki-data:/loki
     depends_on:
       - minio-init # Wait for MinIO buckets to be initialized
@@ -368,7 +368,7 @@ services:
     ports:
       - "9080:9080" # Promtail HTTP
     volumes:
-      - ./configs/promtail/config.yml:/etc/promtail/config.yml
+      - ./o11y_configs/promtail/config.yml:/etc/promtail/config.yml
       - /var/run/docker.sock:/var/run/docker.sock:ro # Read Docker container logs
     command: -config.file=/etc/promtail/config.yml
     depends_on:
@@ -386,8 +386,8 @@ services:
       - .env.staging
     volumes:
       - grafana-data:/var/lib/grafana
-      - ./configs/grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./configs/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./o11y_configs/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./o11y_configs/grafana/dashboards:/var/lib/grafana/dashboards:ro
     depends_on:
       - loki
       - tempo

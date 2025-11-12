@@ -39,7 +39,7 @@ defmodule ImageSvc.ConversionOptions do
   defp normalize_input_format(""), do: "png"
   defp normalize_input_format(format), do: format
 
-  defp normalize_quality(""), do: "high"
+  defp normalize_quality(""), do: "medium"
   defp normalize_quality(quality), do: quality
 
   defp normalize_dimension(0), do: nil

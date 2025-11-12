@@ -31,7 +31,7 @@ defmodule JobService.Clients.ImageSvcClient do
       image_url: args["image_url"],
       image_data: <<>>,
       input_format: args["input_format"] || "png",
-      pdf_quality: args["pdf_quality"] || "high",
+      pdf_quality: args["pdf_quality"] || "medium",
       strip_metadata: args["strip_metadata"] != false,
       max_width: args["max_width"] || 0,
       max_height: args["max_height"] || 0,

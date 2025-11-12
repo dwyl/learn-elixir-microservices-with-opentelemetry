@@ -49,7 +49,6 @@ defmodule ClientSvc.MixProject do
       extra_applications: [
         :logger,
         :runtime_tools,
-        # :inets,
         :os_mon,
         :tls_certificate_check
       ],
@@ -90,6 +89,9 @@ defmodule ClientSvc.MixProject do
 
       # OpenAPI documentation
       {:open_api_spex, "~> 3.21"},
+
+      # testing
+      {:vix, "~> 0.35"},
 
       # static tests
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},

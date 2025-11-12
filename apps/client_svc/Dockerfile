@@ -1,7 +1,7 @@
-# Multi-stage Dockerfile for job_svc (Monorepo)
-# Build context MUST be the repo root: docker build -f apps/job_svc/Dockerfile .
+# Multi-stage Dockerfile for client_svc (Monorepo)
+# Build context MUST be the repo root: docker build -f apps/client_svc/Dockerfile .
 # Stage 1: Build the release
-ARG PORT=8082
+ARG PORT=8085
 ARG OS=alpine:3.22.2
 ARG ELIXIR_IMAGE=hexpm/elixir:1.19.2-erlang-28.1-alpine-3.22.2
 FROM ${ELIXIR_IMAGE} AS builder
@@ -14,7 +14,11 @@ RUN apk add --no-cache \
     build-base \
     git \
     openssl-dev \
-    protobuf-dev
+    protobuf-dev \
+    # for escript because alpine is not glibc
+    # bash libc6-compat are needed for some escripts
+    bash libc6-compat 
+
 
 # Set working directory
 WORKDIR /app
@@ -26,12 +30,12 @@ RUN mix local.hex --force && \
 # Copy shared protos library first (for better caching)
 COPY libs/protos libs/protos/
 
-# Copy job_svc dependency files
-COPY apps/job_svc/mix.exs apps/job_svc/mix.lock apps/job_svc/
-COPY apps/job_svc/config/config.exs apps/job_svc/config/prod.exs apps/job_svc/config/
+# Copy client_svc dependency files
+COPY apps/client_svc/mix.exs apps/client_svc/mix.lock apps/client_svc/
+COPY apps/client_svc/config/config.exs apps/client_svc/config/prod.exs apps/client_svc/config/
 
-# Set working directory to job_svc
-WORKDIR /app/apps/job_svc
+# Set working directory to client_svc
+WORKDIR /app/apps/client_svc
 
 # Install dependencies (will compile protos lib automatically)
 ENV MIX_ENV=prod
@@ -42,9 +46,9 @@ RUN mix escript.install --force hex protobuf
 ENV PATH="/root/.mix/escripts:${PATH}"
 
 # Copy application code
-COPY apps/job_svc/lib ./lib
-COPY apps/job_svc/priv ./priv
-COPY apps/job_svc/config/runtime.exs config/
+COPY apps/client_svc/lib ./lib
+COPY apps/client_svc/priv ./priv
+COPY apps/client_svc/config/runtime.exs config/
 
 # Compile application (protos will be compiled as dependency)
 RUN mix compile
@@ -72,11 +76,8 @@ RUN addgroup -g 1000 appuser && \
 
 WORKDIR /app
 
-# Copy release from builder (built in /app/apps/job_svc)
-COPY --from=builder --chown=appuser:appuser /app/apps/job_svc/_build/prod/rel/job_svc ./
-
-# Create database directory with proper permissions
-RUN mkdir -p /app/db && chown -R appuser:appuser /app/db
+# Copy release from builder (built in /app/apps/client_svc)
+COPY --from=builder --chown=appuser:appuser /app/apps/client_svc/_build/prod/rel/client_svc ./
 
 # Switch to non-root user
 USER appuser
@@ -89,4 +90,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD ["/bin/sh", "-c", "wget -q --spider http://localhost:${PORT}/health || exit 1"]
 
 # Start the application
-CMD ["bin/job_svc", "start"]
+CMD ["bin/client_svc", "start"]

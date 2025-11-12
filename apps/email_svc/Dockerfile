@@ -1,7 +1,7 @@
-# Multi-stage Dockerfile for client_svc (Monorepo)
-# Build context MUST be the repo root: docker build -f apps/client_svc/Dockerfile .
+# Multi-stage Dockerfile for email_svc (Monorepo)
+# Build context MUST be the repo root: docker build -f apps/email_svc/Dockerfile .
 # Stage 1: Build the release
-ARG PORT=8085
+ARG PORT=8083
 ARG OS=alpine:3.22.2
 ARG ELIXIR_IMAGE=hexpm/elixir:1.19.2-erlang-28.1-alpine-3.22.2
 FROM ${ELIXIR_IMAGE} AS builder
@@ -15,9 +15,8 @@ RUN apk add --no-cache \
     git \
     openssl-dev \
     protobuf-dev \
-    bash libc6-compat 
-
-# bash libc6-compat are needed for some escripts
+    # for escript because alpine is not glibc
+    bash libc6-compat
 
 # Set working directory
 WORKDIR /app
@@ -29,12 +28,12 @@ RUN mix local.hex --force && \
 # Copy shared protos library first (for better caching)
 COPY libs/protos libs/protos/
 
-# Copy client_svc dependency files
-COPY apps/client_svc/mix.exs apps/client_svc/mix.lock apps/client_svc/
-COPY apps/client_svc/config/config.exs apps/client_svc/config/prod.exs apps/client_svc/config/
+# Copy email_svc dependency files
+COPY apps/email_svc/mix.exs apps/email_svc/mix.lock apps/email_svc/
+COPY apps/email_svc/config/config.exs apps/email_svc/config/prod.exs apps/email_svc/config/
 
-# Set working directory to client_svc
-WORKDIR /app/apps/client_svc
+# Set working directory to email_svc
+WORKDIR /app/apps/email_svc
 
 # Install dependencies (will compile protos lib automatically)
 ENV MIX_ENV=prod
@@ -45,9 +44,8 @@ RUN mix escript.install --force hex protobuf
 ENV PATH="/root/.mix/escripts:${PATH}"
 
 # Copy application code
-COPY apps/client_svc/lib ./lib
-COPY apps/client_svc/priv ./priv
-COPY apps/client_svc/config/runtime.exs config/
+COPY apps/email_svc/lib ./lib
+COPY apps/email_svc/config/runtime.exs config/
 
 # Compile application (protos will be compiled as dependency)
 RUN mix compile
@@ -75,8 +73,8 @@ RUN addgroup -g 1000 appuser && \
 
 WORKDIR /app
 
-# Copy release from builder (built in /app/apps/client_svc)
-COPY --from=builder --chown=appuser:appuser /app/apps/client_svc/_build/prod/rel/client_svc ./
+# Copy release from builder (built in /app/apps/email_svc)
+COPY --from=builder --chown=appuser:appuser /app/apps/email_svc/_build/prod/rel/email_svc ./
 
 # Switch to non-root user
 USER appuser
@@ -89,4 +87,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
     CMD ["/bin/sh", "-c", "wget -q --spider http://localhost:${PORT}/health || exit 1"]
 
 # Start the application
-CMD ["bin/client_svc", "start"]
+CMD ["bin/email_svc", "start"]

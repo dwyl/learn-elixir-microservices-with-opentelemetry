@@ -1,12 +1,12 @@
 # Discover Microservices with Elixir with Observability
 
-This is a demo of **Phoenix-Elixir-based microservices** demonstrating PNG-to-PDF image conversion with email notifications.
+This is a demo of **Phoenix-Elixir-based microservices** demonstrating PNG-to-PDF image conversion with email notifications. It is complete enough to understand the concepts used but not production code.
 
 The idea of this demo is to give an introduction of differents technics:
 
 - an OpenAPI design first,
-- use protocol buffers contracts between services over HTTP/1.1,
-- instrumentation with OpenTelemetry to collect the three observables, namely logs, traces and metrics.
+- protocol buffers contracts between services over HTTP/1.1,
+- instrumentation with OpenTelemetry and PromEx to collect the three observables, logs, traces and metrics.
 
 We use quite a few technologies:
 
@@ -18,15 +18,9 @@ We use quite a few technologies:
 - `OpenTelemetry` with `Jaeger` and `Tempo` for traces (the later uses`MinIO` for back storage)
 - `Promtail` with `Loki` linked to `MinIO` for logs
 - `Prometheus` for metrics
-- `Grafana` for global dashboards and `PromEx` for helping to setup `Grafana` dashboards
+- `Grafana` for global dashboards and `PromEx` to setup `Grafana` dashboards.
 
-It is designed [API-first ➡ Code] as this aappears to be the best way to build APIs.
-
-You used OpenAPI which includes _schemas_ which expose the protocol buffer contracts.
-
-The proto contracts provide strong type safety. They are rather easy to design (_as long as you don't use the full gRPC methods and transport protocol_) and enforces the contract-first approach.
-
-Routes follow a `Twirp`-like RPC DSL, with a format `/service_name/method_name` instead of traditional REST (`/resource`).
+> **About API design**: it is designed [API-first ➡ Code] as this aappears to be the best way to build APIs. The OpenAPI files define the _schemas_ which expose the protocol buffer contracts. The proto contracts provide strong type safety. They are rather easy to design (_as long as you don't use the full gRPC methods and transport protocol_) and enforces the contract-first approach. Routes follow a `Twirp`-like RPC DSL, with a format `/service_name/method_name` instead of traditional REST (`/resource`).
 
 The main interest of this demo is to display a broad range of tools and orchestrate the observability tools with OpenTelemetry in `Elixir`.
 
@@ -36,8 +30,8 @@ This project uses **containers** heavily.
 
 Ensure you have the following installed on your system:
 
-- **Protocol Buffers Compiler** (`protoc`) - [Installation guide](https://grpc.io/docs/protoc-installation/)
-- **ImageMagick** - Required for PNG/JPEG to PDF conversion
+- Protocol Buffers Compiler (`protoc`) - [Installation guide](https://grpc.io/docs/protoc-installation/)
+- `ImageMagick` and `Ghostscript` for PNG, JPEG -> PDF conversion
 
 The **Docker setup**:
 
@@ -58,7 +52,7 @@ and run the _watch_ mode:
 docker compose up --watch
 ```
 
-- Execute Elixir commands on the _client_service_ container:
+You can execute Elixir commands on the _client_service_ container:
 
 ```sh
 docker exec -it msvc-client-svc bin/client_svc remote
@@ -281,7 +275,7 @@ RUN mix compile
 1. **Single source of truth**: The `.proto` files live in `libs/protos/proto_defs/`
 2. **Custom Mix compiler**: Automatically compiles protos during `mix deps.get`
 3. **Path dependency**: Services include `{:protos, path: "../../libs/protos"}` in mix.exs
-4. **No manual copying**: Compiled `*.pb.ex` files are generated once and reused
+4. **versioning**: Compiled `*.pb.ex` files are generated once and reused
 5. Build automation: No manual `protoc` commands
 6. Container-ready: Works in both dev and Docker environments
 
@@ -577,6 +571,40 @@ We use `Phoenix` and `Req`.
 {:telemetry_poller, "~> 1.3"},
 ```
 
+Note the `:temporary` settings:
+
+```elixir
+defp releases() do
+[
+      client_svc: [
+        applications: [
+          client_svc: :permanent,
+          opentelemetry_exporter: :permanent,
+          opentelemetry: :temporary
+        ],
+        include_executables_for: [:unix],
+      ]
+    ]
+end
+```
+
+We use Erlang's [OS MON](https://www.erlang.org/doc/apps/os_mon/os_mon_app.html) to monitor the system:
+
+```elixir
+def application do
+    [
+      extra_applications: [
+        :logger,
+        :os_mon,
+        :tls_certificate_check
+      ],
+      mod: {ClientService.Application, []}
+    ]
+  end
+```
+
+
+
 In _endpoint.ex_, check that you have:
 
 ```elixir
@@ -679,6 +707,15 @@ Task.async(fn ->
 end)
 ```
 
+### PromEx for Grafana dashboards
+
+We setup two custom plugins and each has its own Grafana dashboard:
+
+- One to monitor the OS metrics using `Polling.build()`,
+- and one to monitor the Image conversion process using `Event.build()`.
+
+The sources at the end are a good source of explanation on how to do this.
+
 ## COCOMO Complexity Analysis of this project
 
 Curious? ⏯️ <https://en.wikipedia.org/wiki/COCOMO>
@@ -689,23 +726,23 @@ Implementation: <https://github.com/boyter/scc>
 
 | Language        | Files | Lines  | Blanks | Comments | Code   | Complexity |
 | --------------- | ----- | ------ | ------ | -------- | ------ | ---------- |
-| Elixir          | 130   | 8,271  | 1,212  | 1,170    | 5,889  | 300        |
-| YAML            | 13    | 2,148  | 160    | 76       | 1,912  | 0          |
-| JSON            | 10    | 14,847 | 6      | 0        | 14,841 | 0          |
+| Elixir          | 132   | 8,240  | 1,167  | 877      | 6,196  | 270        |
+| YAML            | 13    | 2,154  | 160    | 78       | 1,916  | 0          |
+| JSON            | 12    | 15,953 | 6      | 0        | 15,947 | 0          |
 | Markdown        | 10    | 2,293  | 551    | 0        | 1,742  | 0          |
 | Docker ignore   | 6     | 209    | 48     | 54       | 107    | 0          |
-| Dockerfile      | 5     | 453    | 112    | 114      | 227    | 17         |
-| Protocol Buffe… | 5     | 251    | 45     | 25       | 181    | 0          |
+| Dockerfile      | 5     | 456    | 113    | 116      | 227    | 16         |
+| Protocol Buffe… | 10    | 502    | 90     | 50       | 362    | 0          |
 | HTML            | 1     | 412    | 33     | 0        | 379    | 0          |
 | Makefile        | 1     | 77     | 11     | 11       | 55     | 4          |
 | Shell           | 1     | 41     | 7      | 6        | 28     | 0          |
-| Total           | 182   | 29,002 | 2,185  | 1,456    | 25,361 | 321        |
+| Total           | 190   | 29,838 | 2,039  | 1,192    | 26,607 | 290        |
 
-Estimated Cost to Develop (organic) $805,322
+Estimated Cost to Develop (organic) $846,917
 
-Estimated Schedule Effort (organic) 12.67 months
+Estimated Schedule Effort (organic) 12.91 months
 
-Estimated People Required (organic) 5.65
+Estimated People Required (organic) 5.83
 
 ## Production Considerations
 
@@ -723,34 +760,20 @@ Estimated People Required (organic) 5.65
 - Sidecar pattern (Promtail as DaemonSet in K8s) reduces per-pod overhead
 - **Sampling strategies** for traces (10% of traffic vs 100% in dev)
 - **Protocol optimization**:
-  - **Current**: OTLP/HTTP (port 4318) - Easy to debug, reliable
-  - **Production**: Switch to OTLP/gRPC (port 4317) - 2-5x faster, HTTP/2 multiplexing
+  - **logs**: Switch to OTLP/gRPC (port 4317) - 2-5x faster, HTTP/2 multiplexing
   - **Metrics**: Consider StatsD/UDP (fire-and-forget, non-blocking) for high-volume metrics
-  - **How to switch to gRPC**:
   
-      ```bash
-      # Option 1: Environment variables (recommended)
-      OTEL_EXPORTER_OTLP_PROTOCOL=grpc
-      OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
-      
-      # Option 2: .env file (copy from .env.example)
-      echo "OTEL_PROTOCOL=grpc" >> .env
-      echo "OTEL_ENDPOINT=http://jaeger:4317" >> .env
-      docker compose up --build
-      ```
+  ```bash
+  OTEL_EXPORTER_OTLP_PROTOCOL=grpc
+  OTEL_EXPORTER_OTLP_ENDPOINT=http://jaeger:4317
+  ```
 
-  - **Note**: Requires `otlp_protocol` config update (already implemented in `user_svc`, replicate for other services)
-  - **Why not UDP for traces?** Traces are critical for debugging; losing spans = incomplete request flows
+## Enhancement?
 
-## TODOS?
+- Safety
+  - enable protected endpoints (Grafana, S3)
 
 - Observability Enhancements
-
-  - **Add custom PromEx plugins** for business metrics:
-    - Image conversion success rate
-    - Email delivery latency
-    - Job queue depth by worker type
-
   - **Alerting rules**:
     - Prometheus AlertManager for threshold-based alerts
     - Integrate with PagerDuty/Slack
@@ -759,8 +782,7 @@ Estimated People Required (organic) 5.65
     - Sample 10% of successful requests
     - Keep 100% of errors/warnings
 
-### Possible architecture Improvements
-
+- Possible architecture Improvements
 - **Service mesh** (Istio/Linkerd):
   - Automatic mTLS between services
   - Circuit breaking and retries
@@ -804,7 +826,22 @@ iex(client_svc@b6d94600b7e3)5>
       end)
    |> Stream.run()
 
-iex(client_svc@b6d94600b7e3)6> Stream.interval(100) |>Stream.take(1200) |> Task.async_stream(fn i -> ImageClient.convert_png("lib/client_svc-0.1.0/priv/test.png", "m#{i}@com") end, max_concurrenccy: 10, orderede: false) |> Stream.run()
+iex(client_svc@b6d94600b7e3)6> 
+  Stream.interval(100) 
+  |>Stream.take(1200) 
+  |> Task.async_stream(fn 
+    i -> ImageClient.convert_png("lib/client_svc-0.1.0/priv/test.png", "m#{i}@com") end, max_concurrenccy: 10, 
+    orderede: false
+  ) 
+  |> Stream.run()
+
+iex(client_svc@b6d94600b7e3)7>
+  File.cd!("lib/client_svc-0.1.0/priv")
+  {:ok, img} = Vix.Vips.Operation.worley(5000, 5000)
+  :ok = Vix.Vips.Image.write_to_file(img, "big-test.png")
+  File.read!("big-test.png") |> byte_size()
+  ImageClient.convert_png("big-test.png", "me@com")
+
 # :ok
 ```
 
