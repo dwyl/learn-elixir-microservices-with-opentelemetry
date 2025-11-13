@@ -8,6 +8,54 @@ It works on Docker as an API. The Elixir containers/services can be reached via 
 
 [TODO] Deploy with a Livebook launcher.
 
+## Table of Contents
+
+- [Discover Microservices with Elixir with Observability](#discover-microservices-with-elixir-with-observability)
+  - [Table of Contents](#table-of-contents)
+  - [The Problem](#the-problem)
+  - [What This Demo Covers](#what-this-demo-covers)
+  - [Prerequisites](#prerequisites)
+  - [OpenAPI Documentation](#openapi-documentation)
+    - [Design-First Workflow](#design-first-workflow)
+    - [API Style: Twirp-like RPC](#api-style-twirp-like-rpc)
+    - [Note on Runtime Validation](#note-on-runtime-validation)
+  - [Protobuf](#protobuf)
+    - [Protobuf in Practice: Encode/Decode Pattern](#protobuf-in-practice-encodedecode-pattern)
+    - [Transport](#transport)
+    - [Centralized Proto Compilation](#centralized-proto-compilation)
+  - [OpenTelemetry](#opentelemetry)
+    - [Setup](#setup)
+    - [Propagation traces with Req](#propagation-traces-with-req)
+    - [Start a trace](#start-a-trace)
+  - [Services Overview](#services-overview)
+    - [Client service](#client-service)
+    - [User service](#user-service)
+    - [Job service](#job-service)
+    - [Email service](#email-service)
+    - [Image service](#image-service)
+    - [Workflow example: Email Notification](#workflow-example-email-notification)
+    - [Workflow Example: PNG to PDF Conversion (Pull Model)](#workflow-example-png-to-pdf-conversion-pull-model)
+  - [Observability](#observability)
+    - [Telemetry vs OpenTelemetry: Two Different Things](#telemetry-vs-opentelemetry-two-different-things)
+      - [Erlang/Elixir `:telemetry` (Local Event Bus)](#erlangelixir-telemetry-local-event-bus)
+      - [OpenTelemetry (Distributed Observability Standard)](#opentelemetry-distributed-observability-standard)
+      - [How They Work Together in This Project](#how-they-work-together-in-this-project)
+    - [Stack Overview](#stack-overview)
+    - [Trace pipeline](#trace-pipeline)
+    - [Logs pipeline](#logs-pipeline)
+      - [How Logs Are Produced and Collected](#how-logs-are-produced-and-collected)
+    - [Metrics pipeline](#metrics-pipeline)
+      - [How Metrics Are Produced and Collected](#how-metrics-are-produced-and-collected)
+    - [Key Differences from Logs \& Traces](#key-differences-from-logs--traces)
+  - [PromEx Configuration and Dashboards](#promex-configuration-and-dashboards)
+    - [Datasource Configuration](#datasource-configuration)
+    - [Generate and Export Dashboards](#generate-and-export-dashboards)
+  - [COCOMO Complexity Analysis of this project](#cocomo-complexity-analysis-of-this-project)
+  - [Production Considerations](#production-considerations)
+  - [Enhancement?](#enhancement)
+  - [Tests](#tests)
+  - [Sources](#sources)
+
 ## The Problem
 
 **Goal**: We want to build a system that delivers high-volume PNG-to-PDF conversion with email notifications.
@@ -90,7 +138,7 @@ This project uses OpenAPI primarily for **design and documentation** (no runtime
 
 ### Design-First Workflow
 
-When you receive a ticket to implement an API, **start by defining the OpenAPI specification**. This follows the **API-design-first** approach, which is considered best practice for building maintainable APIs.
+When you receive a ticket to implement an API, **start by defining the OpenAPI specification**. This follows the [API-design-first](https://learn.openapis.org/best-practices.html#use-a-design-first-approach) approach, which is considered best practice for building maintainable APIs.
 
 **The workflow:**
 
@@ -194,7 +242,7 @@ The manual YAML specs are:
 
 We expose the documentation via a `SwaggerUI` container (port 8087). The container has a bind mount to the _/open_api_ folder.
 
-An example:
+An example of the generated documentation served by `Swagger` (see below).
 
 <img src="https://github.com/ndrean/micro_ex/blob/main/priv/openapi-email-svc.png" alt="openapi-email">
 
