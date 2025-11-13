@@ -717,7 +717,7 @@ The Logger eventually writes to **stdout** (standard output), which is captured 
 
 ```mermaid
 flowchart LR
-    Code[Your Code<br>Logger.info/error/warning]
+    Code[Code<br>Logger.info error]
     Logger[Elixir Logger<br>Async Process]
     Stdout[stdout<br>OS/Docker]
     Promtail[Promtail<br>Log Shipper]
@@ -798,7 +798,7 @@ Grafana queries Prometheus using PromQL to create dashboards:
 
 ```mermaid
 flowchart LR
-    Code[Your Code<br>+ Libraries]
+    Code[Code<br>+ Libraries]
     Telemetry[Erlang :telemetry<br>Event Bus]
     PromEx[PromEx<br>Metrics Exporter]
     Endpoint["/metrics" endpoint<br>Plain Text]
