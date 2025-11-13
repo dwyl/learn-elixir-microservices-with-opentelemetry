@@ -6,10 +6,7 @@ It is complete enough to understand the concepts used but not production code.
 
 It works on Docker as an API. The Elixir containers/services can be reached via _remote_  sessions and the observability services are reachable in the browser (port mapping in _.env.example_).
 
-[TODO]
-
-- build an interactive (T?)UI to run Elixir commands and reach easily all of the exposed services,
-- deploy this example on Debian VPS (and change to Debian based images instead of Alpine)
+[TODO] Deploy with a Livebook launcher.
 
 ## The Problem
 
@@ -89,6 +86,8 @@ docker exec -it msvc-client-svc bin/client_svc remote
 
 ## OpenAPI Documentation
 
+This project uses OpenAPI primarily for **design and documentation** (no runtime validation, see further).
+
 ### Design-First Workflow
 
 When you receive a ticket to implement an API, **start by defining the OpenAPI specification**. This follows the **API-design-first** approach, which is considered best practice for building maintainable APIs.
@@ -156,6 +155,28 @@ message EmailRequest {
   map<string, string> variables = 5;  // Additional fields for implementation
 }
 ```
+
+### Note on Runtime Validation
+
+There is **no runtime validation against the OpenAPI schemas** in this project.
+
+However, **protobuf provides its own runtime validation** - it enforces type safety when encoding/decoding messages. Schema violations are caught during development: if you try to decode a malformed binary or encode invalid data, protobuf will raise an error.
+
+**The key difference:** we validate against **protobuf schemas** (`.proto` files), not OpenAPI schemas (`.yaml` files). Intra-service communication therefore does not need this.
+
+**Where validation is needed:** Incoming external requests are typically validated at the **gateway level**. Tools like [Envoy](https://gateway.envoyproxy.io/docs/) are "smart reverse proxies" that can load balance, validate OpenAPI schemas, and provide authentication and rate limiting.
+
+**For contract testing:** Validate implementation against specs with [PactFlow](https://docs.pactflow.io/docs/bi-directional-contract-testing/contracts/oas).
+
+**If you add runtime validation:** Libraries like [`:open_api_spex`](https://hexdocs.pm/open_api_spex/) integrate with Phoenix:
+
+```elixir
+plug OpenApiSpex.Plug.CastAndValidate,
+  json_render_error_v2: true,
+  operation_id: "EmailController.send"
+```
+
+This validates requests but adds ~2-3ms latency per request.
 
 The best introduction is to read [the OpenAPI spec](https://learn.openapis.org/specification/) and explore the examples in the [/openapi](openapi) folder.
 
@@ -399,6 +420,164 @@ RUN mix compile
 You can have a higher or more robust level of integration; check the following [blog from Andrea Leopardi](https://andrealeopardi.com/posts/sharing-protobuf-schemas-across-services/) about sharing protobuf across services. The author present a higher level vision of sharing protobuf schemas: produce a hex package and rely on the Hex package and the CI pipeline.
 
 [<img src="https://github.com/ndrean/micro_ex/blob/main/priv/ALeopardi-share-protobuf.png" with="300">](https://andrealeopardi.com/posts/sharing-protobuf-schemas-across-services/)
+
+## OpenTelemetry
+
+### Setup
+
+We use `Phoenix` and `Req` who emits telemetry events.
+
+**dependencies**: a bunch to add (`PromEx` is for Grafana dashboards for collect Beam metrics and more generally Prometheus metrics in a custom designed dashboard)
+
+```elixir
+{:opentelemetry_exporter, "~> 1.10"},
+{:opentelemetry_api, "~> 1.5"},
+{:opentelemetry_ecto, "~> 1.2"},
+{:opentelemetry, "~> 1.7"},
+{:opentelemetry_phoenix, "~> 2.0"},
+{:opentelemetry_bandit, "~> 0.3.0"},
+{:opentelemetry_req, "~> 1.0"},
+{:tls_certificate_check, "~> 1.29"},
+
+# Prometheus metrics
+{:prom_ex, "~> 1.11.0"},
+{:telemetry_metrics_prometheus_core, "~> 1.2"},
+{:telemetry_poller, "~> 1.3"},
+```
+
+Note the `:temporary` settings:
+
+```elixir
+defp releases() do
+[
+      client_svc: [
+        applications: [
+          client_svc: :permanent,
+          opentelemetry_exporter: :permanent,
+          opentelemetry: :temporary
+        ],
+        include_executables_for: [:unix],
+      ]
+    ]
+end
+```
+
+We use Erlang's [OS MON](https://www.erlang.org/doc/apps/os_mon/os_mon_app.html) to monitor the system:
+
+```elixir
+def application do
+    [
+      extra_applications: [
+        :logger,
+        :os_mon,
+        :tls_certificate_check
+      ],
+      mod: {ClientService.Application, []}
+    ]
+  end
+```
+
+In _endpoint.ex_, check that you have:
+
+```elixir
+# Request ID for distributed tracing correlation
+plug(Plug.RequestId)
+
+# Phoenix telemetry (emits events for OpenTelemetry)
+plug(Plug.Telemetry, event_prefix: [:phoenix, :endpoint])
+```
+
+In the macro injector module (_my_app_web.ex_), add `OpenTelemetry.Tracer` so that it is present in each controller.
+
+```elixir
+def controller do
+  quote do
+    use Phoenix.Controller, formats: [:json]
+
+    import Plug.Conn
+    require OpenTelemetry.Tracer, as: Tracer
+  end
+end
+```
+
+In _telemetry.ex_, your `init` callback looks like:
+
+```elixir
+def init(_arg) do
+  Logger.info("[ClientService.Telemetry] Setting up OpenTelemetry instrumentation")
+
+  children = [
+    # Telemetry poller for VM metrics (CPU, memory, etc.)
+    {:telemetry_poller, measurements: periodic_measurements(), period: 10_000}
+  ]
+
+  :ok = setup_opentelemetry_handlers()
+
+  Supervisor.init(children, strategy: :one_for_one)
+end
+
+defp setup_opentelemetry_handlers do
+  # 1. Phoenix automatic instrumentation
+  # Creates spans for every HTTP request with route, method, status
+  :ok = OpentelemetryPhoenix.setup(adapter: :bandit)
+
+  # 2. Bandit HTTP server instrumentation
+  :ok = OpentelemetryBandit.setup(opt_in_attrs: [])
+end
+```
+
+### Propagation traces with Req
+
+Use `OpentelemetryReq.attach(propagate_trace_headers: true)` as [explained in OpenTelemetry_Req](https://hexdocs.pm/opentelemetry_req/OpentelemetryReq.html#module-trace-header-propagation) and as shown below:
+
+```elixir
+defp post(%Mcsv.V2.UserRequest{} = user, base, uri) do
+  binary = Mcsv.V2.UserRequest.encode(user)
+
+  Req.new(base_url: base)
+  |> OpentelemetryReq.attach(propagate_trace_headers: true)
+  |> Req.post(
+    url: uri,
+    body: binary,
+    headers: [{"content-type", "application/protobuf"}]
+  )
+end
+```
+
+### Start a trace
+
+The _trace context_ is automatically propagated.
+
+When we use `with_span`, we get the _parent-child_ relationship.
+
+- you get the current active span from the context
+- Sets the new span as a child of that span
+- Restores the previous span when done
+
+> `Baggage` is when you need metadata available in all downstream spans (userID,...). We don't use this here.
+
+```elixir
+require OpenTelemetry.Tracer, as: Tracer
+require OpenTelemetry.Span, as: Span
+
+def function_to_span(...) do
+  Tracer.with_span "#{__MODULE__}.create/1" do
+    Tracer.set_attribute(:value, i)
+    ok
+  end
+  [...]
+```
+
+If you use an _async_ call, you _must_ propagate it with  `Ctx.get_current()`, and `Ctx.attach(ctx)`:
+
+```elixir
+ctx = OpenTelemetry.Ctx.get_current()
+
+Task.async(fn ->
+  OpenTelemetry.Ctx.attach(ctx)
+  ImageMagick.get_image_info(image_binary)
+end)
+```
 
 ## Services Overview
 
@@ -824,165 +1003,7 @@ flowchart LR
 - **Storage**: Time-series database optimized for aggregations
 - **Purpose**: Quantitative trends over time vs individual events/requests
 
-## OpenTelemetry
-
-### Setup
-
-We use `Phoenix` and `Req` who emits telemetry events.
-
-**dependencies**: a bunch to add (`PromEx` is for Grafana dashboards for collect Beam metrics and more generally Prometheus metrics in a custom designed dashboard)
-
-```elixir
-{:opentelemetry_exporter, "~> 1.10"},
-{:opentelemetry_api, "~> 1.5"},
-{:opentelemetry_ecto, "~> 1.2"},
-{:opentelemetry, "~> 1.7"},
-{:opentelemetry_phoenix, "~> 2.0"},
-{:opentelemetry_bandit, "~> 0.3.0"},
-{:opentelemetry_req, "~> 1.0"},
-{:tls_certificate_check, "~> 1.29"},
-
-# Prometheus metrics
-{:prom_ex, "~> 1.11.0"},
-{:telemetry_metrics_prometheus_core, "~> 1.2"},
-{:telemetry_poller, "~> 1.3"},
-```
-
-Note the `:temporary` settings:
-
-```elixir
-defp releases() do
-[
-      client_svc: [
-        applications: [
-          client_svc: :permanent,
-          opentelemetry_exporter: :permanent,
-          opentelemetry: :temporary
-        ],
-        include_executables_for: [:unix],
-      ]
-    ]
-end
-```
-
-We use Erlang's [OS MON](https://www.erlang.org/doc/apps/os_mon/os_mon_app.html) to monitor the system:
-
-```elixir
-def application do
-    [
-      extra_applications: [
-        :logger,
-        :os_mon,
-        :tls_certificate_check
-      ],
-      mod: {ClientService.Application, []}
-    ]
-  end
-```
-
-In _endpoint.ex_, check that you have:
-
-```elixir
-# Request ID for distributed tracing correlation
-plug(Plug.RequestId)
-
-# Phoenix telemetry (emits events for OpenTelemetry)
-plug(Plug.Telemetry, event_prefix: [:phoenix, :endpoint])
-```
-
-In the macro injector module (_my_app_web.ex_), add `OpenTelemetry.Tracer` so that it is present in each controller.
-
-```elixir
-def controller do
-  quote do
-    use Phoenix.Controller, formats: [:json]
-
-    import Plug.Conn
-    require OpenTelemetry.Tracer, as: Tracer
-  end
-end
-```
-
-In _telemetry.ex_, your `init` callback looks like:
-
-```elixir
-def init(_arg) do
-  Logger.info("[ClientService.Telemetry] Setting up OpenTelemetry instrumentation")
-
-  children = [
-    # Telemetry poller for VM metrics (CPU, memory, etc.)
-    {:telemetry_poller, measurements: periodic_measurements(), period: 10_000}
-  ]
-
-  :ok = setup_opentelemetry_handlers()
-
-  Supervisor.init(children, strategy: :one_for_one)
-end
-
-defp setup_opentelemetry_handlers do
-  # 1. Phoenix automatic instrumentation
-  # Creates spans for every HTTP request with route, method, status
-  :ok = OpentelemetryPhoenix.setup(adapter: :bandit)
-
-  # 2. Bandit HTTP server instrumentation 
-  :ok = OpentelemetryBandit.setup(opt_in_attrs: [])
-end
-```
-
-### Propagation traces with Req
-
-Use `OpentelemetryReq.attach(propagate_trace_headers: true)` as [explained in OpenTelemetry_Req](https://hexdocs.pm/opentelemetry_req/OpentelemetryReq.html#module-trace-header-propagation) and as shown below:
-
-```elixir
-defp post(%Mcsv.V2.UserRequest{} = user, base, uri) do
-  binary = Mcsv.V2.UserRequest.encode(user)
-
-  Req.new(base_url: base)
-  |> OpentelemetryReq.attach(propagate_trace_headers: true)
-  |> Req.post(
-    url: uri,
-    body: binary,
-    headers: [{"content-type", "application/protobuf"}]
-  )
-end
-```
-
-### Start a trace
-
-The _trace context_ is automatically propagated.
-
-When we use `with_span`, we get the _parent-child_ relationship.
-
-- you get the current active span from the context
-- Sets the new span as a child of that span
-- Restores the previous span when done
-
-> `Baggage` is when you need metadata available in all downstream spans (userID,...). We don't use this here.
-
-```elixir
-require OpenTelemetry.Tracer, as: Tracer
-require OpenTelemetry.Span, as: Span
-
-def function_to_span(...) do
-  Tracer.with_span "#{__MODULE__}.create/1" do
-    Tracer.set_attribute(:value, i)
-    ok
-  end
-  [...]
-```
-
-If you use an _async_ call, you _must_ propagate it with  `Ctx.get_current()`, and `Ctx.attach(ctx)`:
-
-```elixir
-ctx = OpenTelemetry.Ctx.get_current()
-
-Task.async(fn ->
-  OpenTelemetry.Ctx.attach(ctx)
-  ImageMagick.get_image_info(image_binary)
-end)
-```
-
-### PromEx Configuration and Dashboards
+## PromEx Configuration and Dashboards
 
 As described in the [Metrics pipeline](#metrics-pipeline) section above, PromEx converts `:telemetry` events into Prometheus metrics. This section covers the practical configuration and dashboard setup.
 
@@ -991,7 +1012,11 @@ We setup two custom plugins and each has its own Grafana dashboard:
 - One to monitor the OS metrics using `Polling.build()`,
 - and one to monitor the Image conversion process using `Event.build()`.
 
-#### Datasource Configuration
+Example of OS metrics (via `OS MON`) Promex Grafana dashboard:
+
+<img src="https://github.com/ndrean/micro_ex/blob/main/priv/cust-promex.png" alt="os-dashboard">
+
+### Datasource Configuration
 
 For PromEx dashboards to work correctly, the datasource identifier must match across three locations:
 
@@ -1027,7 +1052,7 @@ For PromEx dashboards to work correctly, the datasource identifier must match ac
 - This links exported dashboards to the correct Prometheus datasource
 - Respect Grafana folder structure: _grafana/provisioning/{datasources,dashboards,plugins,notifiers}_
 
-#### Generate and Export Dashboards
+### Generate and Export Dashboards
 
 PromEx provides pre-built Grafana dashboards that visualize metrics from your services. These dashboards are **exported as JSON files** and automatically loaded by Grafana on startup.
 
@@ -1164,6 +1189,34 @@ The observability stack revealed that image conversion is the bottleneck (CPU-bo
   - Capture all job state transitions as immutable events
   - Enables replay and debugging of historical workflows
   - Consider only if compliance requires full audit history
+
+- **Interactive Development Interface**: Currently, you interact with services via `docker exec` remote shells. So a Livebook Integration**.
+
+- Deployment on Debian VPS
+  - Switch from Alpine to Debian-based images for easier debugging
+  
+```mermaid
+architecture-beta
+    service cf(cloud)[CloudFlare]
+    group vps(cloud)[VPS]
+    group o11y(cloud)[Observability] in vps
+    service gate(cloud)[Gateway Caddy] in vps
+    service lvb(server)[LiveBook] in vps
+    group api(cloud)[API] in vps
+    service client(server)[Client] in api
+    service user(server)[Services] in api
+    service db(database)[Database] in api
+    service miniio(cloud)[S3 Storage] in api
+    service j(server)[Jaeger Grafana Prometheus] in o11y
+
+    
+
+    cf:R -- L:gate
+    gate:R -- L:lvb
+    lvb:R -- L:client
+    client:T -- B:user
+    lvb:T -- B:j
+  ```
 
 ## Tests
 

@@ -98,9 +98,6 @@ defmodule ImageSvc.MixProject do
       {:ex_aws_s3, "~> 2.5.8"},
       {:hackney, "~> 1.20"},
       {:sweet_xml, "~> 0.7.5"},
-
-      # OpenAPI documentation
-      {:open_api_spex, "~> 3.21"},
       {:dialyxir, "~> 1.4", only: [:dev, :test], runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
     ]

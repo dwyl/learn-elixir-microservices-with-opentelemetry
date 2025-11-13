@@ -19,37 +19,9 @@ defmodule ConversionController do
   """
 
   use ImageSvcWeb, :controller
-  use OpenApiSpex.ControllerSpecs
 
   require Logger
   require OpenTelemetry.Tracer
-
-  alias ImageSvc.Schemas.{ImageConversionRequestSchema, ImageConversionResponseSchema}
-
-  @doc """
-  Handles POST /image_svc/ConvertImage endpoint.
-
-  Processes an image conversion request from the job worker.
-  """
-  operation(:convert,
-    summary: "Convert image to PDF",
-    description: """
-    Converts a PNG or JPEG image to PDF format with configurable quality settings.
-
-    **Workflow:**
-    1. Fetches image from provided URL
-    2. Converts to PDF using ImageMagick (multi-threaded)
-    3. Stores PDF in MinIO via user_svc
-    4. Returns acknowledgment with image metadata
-    """,
-    request_body:
-      {"Image conversion request", "application/x-protobuf", ImageConversionRequestSchema},
-    responses: [
-      ok: {"Conversion successful", "application/x-protobuf", ImageConversionResponseSchema},
-      internal_server_error:
-        {"Conversion failed", "application/x-protobuf", ImageConversionResponseSchema}
-    ]
-  )
 
   def convert(conn, _) do
     with {:ok, request, new_conn} <- decode_request(conn),

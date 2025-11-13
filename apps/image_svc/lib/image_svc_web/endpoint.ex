@@ -27,9 +27,6 @@ defmodule ImageSvcWeb.Endpoint do
     json_decoder: Jason
   )
 
-  # OpenAPI spec generation
-  plug(OpenApiSpex.Plug.PutApiSpec, module: ImageSvc.ApiSpec)
-
   # HEAD request support (OPTIONS/HEAD for health checks)
   plug(Plug.Head)
 

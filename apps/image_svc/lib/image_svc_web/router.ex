@@ -9,7 +9,4 @@ defmodule ImageSvcWeb.Router do
   # Health check endpoint (GET/HEAD for load balancers)
   get("/health", HealthController, :check)
   head("/health", HealthController, :check)
-  # OpenAPI documentation endpoints
-  get("/api/openapi", OpenApiController, :spec)
-  get("/swaggerui", SwaggerController, :ui)
 end
