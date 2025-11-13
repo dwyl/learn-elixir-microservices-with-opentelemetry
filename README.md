@@ -801,7 +801,7 @@ flowchart LR
     Code[Your Code<br>+ Libraries]
     Telemetry[Erlang :telemetry<br>Event Bus]
     PromEx[PromEx<br>Metrics Exporter]
-    Endpoint[/metrics endpoint<br>Plain Text]
+    Endpoint["/metrics" endpoint<br>Plain Text]
     Prometheus[Prometheus<br>Time Series DB]
     Grafana[Grafana<br>Dashboards]
 
@@ -812,7 +812,7 @@ flowchart LR
     Prometheus -->|PromQL queries| Grafana
 ```
 
-**Key Differences from Logs & Traces:**
+### Key Differences from Logs & Traces
 
 - **Model**: PULL (Prometheus scrapes) vs PUSH (logs/traces sent actively)
 - **Format**: Plain text `key=value` pairs vs JSON/Protobuf
