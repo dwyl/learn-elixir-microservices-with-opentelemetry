@@ -889,7 +889,7 @@ title: Application Services and Trace pipeline
 
 flowchart TD
     subgraph Traces[Each Service is a Trace Producer]
-        UE[User Svc<br> --- <br> OpenTelemetry SDK<br>buffer structured spans]
+        UE[Client or User or Job or ...<br> --- <br> OpenTelemetry SDK<br>buffer structured spans]
     end
 
     subgraph Cons[Traces consumer]
@@ -901,7 +901,7 @@ flowchart TD
         UI[Browser]
     end
 
-    UE -->|batch ~5s<br>POST:4318<br> protobuf|J
+    UE -->|batch ~5s<br>POST:4317<br> protobuf|J
 
     G[GRAFANA<br>] -->|GET:16686<br>/api/traces|J
     UI-->|:3000| G
