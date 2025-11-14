@@ -6,7 +6,7 @@ It is complete enough to understand the concepts used but not production code.
 
 It works on Docker as an API. The Elixir containers/services can be reached via _remote_  sessions and the observability services are reachable in the browser (port mapping in _.env.example_).
 
-- Livebook launcher: <http://localhost:8090>
+- [Livebook launcher](https://github.com/ndrean/micro_ex/blob/main/apps/notebooks/monitoring_dashboard.livemd): <http://localhost:8090>
   
 [TODO]: setup as an app
 
