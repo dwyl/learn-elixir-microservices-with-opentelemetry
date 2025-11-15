@@ -646,6 +646,7 @@ end)
 
 ```mermaid
 architecture-beta
+    service lvb(cloud)[LiveBook]
     group api(cloud)[API]
     service client(internet)[Client] in api
     service s3(disk)[S3 MinIO] in api
@@ -655,6 +656,7 @@ architecture-beta
     service email(internet)[SMTP] in api
     service image(disk)[Image] in api
 
+    lvb:R -- L:client
     client:R -- L:user
     image:R --> L:s3
     job:B -- T:user
