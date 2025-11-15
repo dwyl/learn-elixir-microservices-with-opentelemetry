@@ -1305,33 +1305,39 @@ docker exec -it msvc-client-svc bin/client_svc remote
 
 ```elixir
 iex(client_svc@container)>
-1..1000
-|> Task.async_stream(fn i -> Client.create(i) end, max_concurrency: 10, ordered: false)
-|> Stream.run()
+  Task.async_stream(
+    1..1000
+    fn i -> Client.create(i) end, 
+    max_concurrency: 10, 
+    ordered: false
+    )
+  |> Stream.run()
 ```
 
 **Test image conversion with generated test image:**
 
 ```elixir
 iex(client_svc@container)>
-File.cd!("lib/client_svc-0.1.0/priv")
-{:ok, img} = Vix.Vips.Operation.worley(5000, 5000)
-:ok = Vix.Vips.Image.write_to_file(img, "big-test.png")
-ImageClient.convert_png("big-test.png", "test@example.com")
+  File.cd!("lib/client_svc-0.1.0/priv")
+  {:ok, img} = Vix.Vips.Operation.worley(5000, 5000)
+  :ok = Vix.Vips.Image.write_to_file(img, "big-test.png")
+  ImageClient.convert_png("big-test.png", "test@example.com")
 ```
 
 **Load test (sustained throughput):**
 
 ```elixir
 iex(client_svc@container)>
-Stream.interval(100)  # Every 100ms
-|> Stream.take(1200)  # 2 minutes worth
-|> Task.async_stream(
-  fn i -> ImageClient.convert_png("test.png", "user#{i}@example.com") end,
-  max_concurrency: 10,
-  ordered: false
-)
-|> Stream.run()
+  Stream.interval(100)  # Every 100ms
+  |> Stream.take(1200)  # 2 minutes worth
+  |> Task.async_stream(
+    fn i -> 
+      ImageClient.convert_png("test.png", "user#{i}@example.com")
+    end,
+    max_concurrency: 10,
+    ordered: false
+  )
+  |> Stream.run()
 ```
 
 These manual tests generate real load that can be observed in Grafana dashboards (see [Observability](#observability) section)
