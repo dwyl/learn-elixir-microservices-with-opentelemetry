@@ -8,11 +8,9 @@ It works on Docker as an API with a LiveBook UI to reach the services which have
 
 In practice, you can reach any Elixir containers/services via _remote_  sessions and the observability services are reachable in the browser (port mapping _SERVICES.md_).
 
-However, we added a LiveBook with BEAM distribution as this facilitates a lot interaction with the microservices.
+However, we added a LiveBook with BEAM distribution as this facilitates a lot interaction with the microservices (_DOCKER_CLUSTERING.md_).
 
 You experience the "endpoints hell" (discovery, hardcoded mapping everywhere). OpenAPI documentation and Observability are first-class citizens in such projects and are key to help.
-
-In a separate _nats_ branch, we use [NATS.IO](https://docs.nats.io/) via the [gnat package](https://github.com/nats-io/nats.ex) to address this endpoint management with a different paradigm (event driven pattern) and rethink the architecture.
 
 - [Livebook launcher](https://github.com/ndrean/micro_ex/blob/main/apps/notebooks/monitoring_dashboard.livemd): <http://localhost:8090>
   
@@ -20,6 +18,8 @@ In a separate _nats_ branch, we use [NATS.IO](https://docs.nats.io/) via the [gn
 
 - [Services guide](https://github.com/ndrean/micro_ex/blob/main/SERVICES.md)
 - [Docker clustering guide](https://github.com/ndrean/micro_ex/blob/main/DOCKER_CLUSTERING.md)
+
+> In a separate _nats_ branch, we will migrate to use [NATS.IO](https://docs.nats.io/) via the [gnat package](https://github.com/nats-io/nats.ex) to address this endpoint management with a different paradigm (event driven pattern) and rethink the architecture while still using protobuf schemas. Kubernetes uses this.
 
 ## Table of Contents
 
